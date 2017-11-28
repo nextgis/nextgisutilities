@@ -30,3 +30,15 @@
 *.exe
 *.out
 *.app
+
+# Debug files
+*.dSYM/
+
+# Build
+/build*
+/inst
+
+# Temp
+*~
+.~*
+*.user
