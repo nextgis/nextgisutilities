@@ -63,6 +63,12 @@ include(FindAnyProject)
 find_anyproject(GDAL REQUIRED)
 find_anyproject(GEOS REQUIRED)
 
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
+if(COMPILER_SUPPORTS_CXX11)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+endif()
+
 set(INSTALL_TARGETS)
 
 macro(ADD_EXE target sources)
@@ -71,8 +77,7 @@ macro(ADD_EXE target sources)
     if(OSX_FRAMEWORK)
         set_target_properties(${target} PROPERTIES INSTALL_RPATH "@executable_path/../../Library/Frameworks")
     endif()
-    set_target_properties(${target} PROPERTIES CXX_STANDARD 11)
-
+    # set_target_properties(${target} PROPERTIES CXX_STANDARD 11)
     set(INSTALL_TARGETS ${INSTALL_TARGETS} ${target})
 endmacro()
 
@@ -91,8 +96,6 @@ set(NG_CUTTER_SRC
 
 set(SRC ${NG_CUTTER_SRC} ${NG_CUTTER_H})
 add_exe(ng_cutter "${SRC}")
-
-message(STATUS "INSTALL_TARGETS: ${INSTALL_TARGETS}")
 
 if(NOT SKIP_INSTALL_EXECUTABLES AND NOT SKIP_INSTALL_ALL )
     install(TARGETS ${INSTALL_TARGETS}
