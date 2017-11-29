@@ -39,6 +39,12 @@ ERROR 1: Attempt to write non-polygon (LINESTRING) geometry to POLYGON type shap
 
 > sys	0m15.187s
 
+# License
+
+This program is licensed under GNU GPL v2 or any later version
+
+![License](https://img.shields.io/badge/License-GPL%20v2-blue.svg?maxAge=2592000)
+
 # Commercial support
 
 Need to fix a bug or add a feature to NextGIS Web? We provide custom development
