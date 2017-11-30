@@ -21,7 +21,7 @@
 
 cmake_minimum_required (VERSION 2.8.12 FATAL_ERROR)
 
-project(ng_utilities)
+project(nextgisutilities)
 
 # Some init settings
 set(CMAKE_COLOR_MAKEFILE ON)
