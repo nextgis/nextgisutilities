@@ -3818,15 +3818,23 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
 
             if (layerTranslator->m_poClipSrc)
             {
-
+                char result = 0;
                 GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
+                if(nullptr != dstGeom) {
 
-                if(hMutex) {
-                    CPLAcquireMutex(hMutex, 1.0);
+                    if(hMutex) {
+                        CPLAcquireMutex(hMutex, 1.0);
+                    }
+
+                    result = GEOSPreparedContains_r(geosContext, cutGeomPrepSrc, dstGeom);
+
+                    if(hMutex) {
+                        CPLReleaseMutex(hMutex);
+                    }
                 }
-                char result = GEOSPreparedContains_r(geosContext, cutGeomPrepSrc, dstGeom);
-                if(hMutex) {
-                    CPLReleaseMutex(hMutex);
+                else {
+                    CPLError( CE_Failure, CPLE_AppDefined, "Failed to exportToGEOS feature " CPL_FRMT_GIB " (geometry probably is invalid).",
+                              poFeature->GetFID() );
                 }
 
                 if(result != 1) {
@@ -3892,13 +3900,20 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                 if( poDstGeometry == NULL )
                     goto end_loop;
 
+                char result = 0;
                 GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
-                if(hMutex) {
-                    CPLAcquireMutex(hMutex, 1.0);
+                if(nullptr != dstGeom) {
+                    if(hMutex) {
+                        CPLAcquireMutex(hMutex, 1.0);
+                    }
+                    result = GEOSPreparedContains_r(geosContext, cutGeomPrepDst, dstGeom);
+                    if(hMutex) {
+                        CPLReleaseMutex(hMutex);
+                    }
                 }
-                char result = GEOSPreparedContains_r(geosContext, cutGeomPrepDst, dstGeom);
-                if(hMutex) {
-                    CPLReleaseMutex(hMutex);
+                else {
+                    CPLError( CE_Failure, CPLE_AppDefined, "Failed to exportToGEOS feature " CPL_FRMT_GIB " (geometry probably is invalid).",
+                              poFeature->GetFID() );
                 }
 
                 if(result != 1) {
