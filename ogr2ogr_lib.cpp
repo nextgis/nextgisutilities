@@ -52,8 +52,7 @@
 #include "ogrlayerdecorator.h"
 #include "cpl_worker_thread_pool.h"
 
-#include "geos_c.h"
-
+#include "lwgeom_lib.h"
 
 OGRLayer* GetLayerAndOverwriteIfNecessary(GDALDataset *poDstDS,
                                                  const char* pszNewLayerName,
@@ -3619,14 +3618,15 @@ static bool SetupCT( TargetLayerInfo* psInfo,
     return true;
 }
 
-
 static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeature,
                            TargetLayerInfo* psInfo,
                            OGRSpatialReference* poOutputSRS,
                            GDALVectorTranslateOptions *psOptions,
                            GEOSContextHandle_t geosContext,
                            const GEOSPreparedGeometry* cutGeomPrepSrc,
+                           GEOSGeom cutGeomSrc,
                            const GEOSPreparedGeometry* cutGeomPrepDst,
+                           GEOSGeom cutGeomDst,
                            GIntBig& nFeaturesWritten,
                            GIntBig& nTotalEventsDone,
                            int& nFeaturesInTransaction,
@@ -3820,7 +3820,15 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
             {
                 char result = 0;
                 GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
+                bool wasInvalid = false;
                 if(nullptr != dstGeom) {
+
+                    if(GEOSisValid_r(geosContext, dstGeom) == 0) {
+                        dstGeom = MakeValid(geosContext, dstGeom, static_cast<OGRwkbGeometryType>(eGType));
+                        wasInvalid = true;
+                    }
+
+                    if(nullptr != dstGeom) {
 
                     if(hMutex) {
                         CPLAcquireMutex(hMutex, 1.0);
@@ -3831,22 +3839,31 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                     if(hMutex) {
                         CPLReleaseMutex(hMutex);
                     }
+                    }
                 }
                 else {
                     CPLError( CE_Failure, CPLE_AppDefined, "Failed to exportToGEOS feature " CPL_FRMT_GIB " (geometry probably is invalid).",
                               poFeature->GetFID() );
                 }
 
-                if(result != 1) {
+                if(result != 1 && nullptr != dstGeom) {
+                    GEOSGeom cutGeom = GEOSIntersection_r(geosContext, cutGeomSrc, dstGeom);
+                    OGRGeometry* poClipped = nullptr;
+                    if(nullptr != cutGeom) {
+                        poClipped = OGRGeometryFactory::createFromGEOS(geosContext, cutGeom);
+                    }
 
-                OGRGeometry* poClipped = poDstGeometry->Intersection(layerTranslator->m_poClipSrc);
-                delete poDstGeometry;
-                if (poClipped == NULL || poClipped->IsEmpty())
-                {
-                    delete poClipped;
-                    goto end_loop;
+                    delete poDstGeometry;
+                    if (poClipped == NULL || poClipped->IsEmpty())
+                    {
+                        delete poClipped;
+                        goto end_loop;
+                    }
+                    poDstGeometry = poClipped;
                 }
-                poDstGeometry = poClipped;
+                else if(wasInvalid && nullptr != dstGeom) {
+                    delete poDstGeometry;
+                    poDstGeometry = OGRGeometryFactory::createFromGEOS(geosContext, dstGeom);
                 }
             }
 
@@ -3901,8 +3918,15 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                     goto end_loop;
 
                 char result = 0;
+                bool wasInvalid = false;
                 GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
-                if(nullptr != dstGeom) {
+                if(nullptr != dstGeom && nullptr != dstGeom) {
+                    if(GEOSisValid_r(geosContext, dstGeom) == 0) {
+                        dstGeom = MakeValid(geosContext, dstGeom, static_cast<OGRwkbGeometryType>(eGType));
+                        wasInvalid = true;
+                    }
+
+                    if(nullptr != dstGeom) {
                     if(hMutex) {
                         CPLAcquireMutex(hMutex, 1.0);
                     }
@@ -3910,22 +3934,32 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                     if(hMutex) {
                         CPLReleaseMutex(hMutex);
                     }
+                    }
                 }
                 else {
                     CPLError( CE_Failure, CPLE_AppDefined, "Failed to exportToGEOS feature " CPL_FRMT_GIB " (geometry probably is invalid).",
                               poFeature->GetFID() );
                 }
 
-                if(result != 1) {
-                OGRGeometry* poClipped = poDstGeometry->Intersection(layerTranslator->m_poClipDst);
-                delete poDstGeometry;
-                if (poClipped == NULL || poClipped->IsEmpty())
-                {
-                    delete poClipped;
-                    goto end_loop;
-                }
+                if(result != 1 && nullptr != dstGeom) {
+                    GEOSGeom cutGeom = GEOSIntersection_r(geosContext, cutGeomDst, dstGeom);
+                    OGRGeometry* poClipped = nullptr;
+                    if(nullptr != cutGeom) {
+                        poClipped = OGRGeometryFactory::createFromGEOS(geosContext, cutGeom);
+                    }
 
-                poDstGeometry = poClipped;
+                    delete poDstGeometry;
+                    if (poClipped == NULL || poClipped->IsEmpty())
+                    {
+                        delete poClipped;
+                        goto end_loop;
+                    }
+
+                    poDstGeometry = poClipped;
+                }
+                else if(wasInvalid && nullptr != dstGeom) {
+                    delete poDstGeometry;
+                    poDstGeometry = OGRGeometryFactory::createFromGEOS(geosContext, dstGeom);
                 }
             }
 
@@ -4027,7 +4061,9 @@ typedef struct _ProcessFeatureJob {
     GDALVectorTranslateOptions *psOptions;
     GEOSContextHandle_t geosContext;
     const GEOSPreparedGeometry* cutGeomPrepSrc;
+    GEOSGeom cutGeomSrc;
     const GEOSPreparedGeometry* cutGeomPrepDst;
+    GEOSGeom cutGeomDst;
     GIntBig& nFeaturesWritten;
     GIntBig& nTotalEventsDone;
     int& nFeaturesInTransaction;
@@ -4040,7 +4076,8 @@ static void ProcessFeatureJobProcess(void* userData)
 
     bool result = ProcessFeature(job->layerTranslator, job->poFeature, job->psInfo,
                    job->poOutputSRS, job->psOptions, job->geosContext,
-                   job->cutGeomPrepSrc, job->cutGeomPrepDst, job->nFeaturesWritten,
+                   job->cutGeomPrepSrc, job->cutGeomSrc, job->cutGeomPrepDst,
+                   job->cutGeomDst, job->nFeaturesWritten,
                    job->nTotalEventsDone, job->nFeaturesInTransaction, job->hMutex);
 }
 
@@ -4092,12 +4129,16 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
     OGRSpatialReference* poOutputSRS = m_poOutputSRS;
     GEOSContextHandle_t geosContext = OGRGeometry::createGEOSContext();
     const GEOSPreparedGeometry* cutGeomPrepSrc = nullptr;
+    GEOSGeom cutGeomSrc = nullptr;
     if(m_poClipSrc) {
-        cutGeomPrepSrc = GEOSPrepare_r(geosContext, m_poClipSrc->exportToGEOS(geosContext));
+        cutGeomSrc = m_poClipSrc->exportToGEOS(geosContext);
+        cutGeomPrepSrc = GEOSPrepare_r(geosContext, cutGeomSrc);
     }
     const GEOSPreparedGeometry* cutGeomPrepDst = nullptr;
+    GEOSGeom cutGeomDst = nullptr;
     if(m_poClipDst) {
-        cutGeomPrepDst = GEOSPrepare_r(geosContext, m_poClipDst->exportToGEOS(geosContext));
+        cutGeomDst = m_poClipDst->exportToGEOS(geosContext);
+        cutGeomPrepDst = GEOSPrepare_r(geosContext, cutGeomDst);
     }
     poSrcLayer = psInfo->poSrcLayer;
     poDstLayer = psInfo->poDstLayer;
@@ -4169,7 +4210,9 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
                                                             psInfo, poOutputSRS,
                                                             psOptions, geosContext,
                                                             cutGeomPrepSrc,
+                                                            cutGeomSrc,
                                                             cutGeomPrepDst,
+                                                            cutGeomDst,
                                                             nFeaturesWritten,
                                                             nTotalEventsDone,
                                                             nFeaturesInTransaction,
@@ -4179,8 +4222,10 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
         }
         else {
             if(!ProcessFeature(this, poFeature, psInfo, poOutputSRS, psOptions,
-                               geosContext, cutGeomPrepSrc, cutGeomPrepDst,
-                               nFeaturesWritten, nTotalEventsDone, nFeaturesInTransaction, hMutex)) {
+                               geosContext, cutGeomPrepSrc, cutGeomSrc,
+                               cutGeomPrepDst, cutGeomDst,
+                               nFeaturesWritten, nTotalEventsDone,
+                               nFeaturesInTransaction, hMutex)) {
                 return false;
             }
         }
@@ -4222,6 +4267,8 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
 
     GEOSPreparedGeom_destroy_r(geosContext, cutGeomPrepSrc);
     GEOSPreparedGeom_destroy_r(geosContext, cutGeomPrepDst);
+    GEOSGeom_destroy_r(geosContext, cutGeomSrc);
+    GEOSGeom_destroy_r(geosContext, cutGeomDst);
     OGRGeometry::freeGEOSContext(geosContext);
 
     if( psOptions->nGroupTransactions )
