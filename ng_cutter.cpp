@@ -218,8 +218,8 @@ int main( int nArgc, char ** papszArgv )
     GDALVectorTranslateOptions *psOptions;
 
     /* Check strict compilation and runtime library version as we use C++ API */
-    if (! GDAL_CHECK_VERSION(papszArgv[0]))
-        exit(1);
+//    if (! GDAL_CHECK_VERSION(papszArgv[0]))
+//        exit(1);
 
     EarlySetConfigOptions(nArgc, papszArgv);
 
