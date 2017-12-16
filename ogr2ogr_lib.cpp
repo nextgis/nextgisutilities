@@ -1778,7 +1778,12 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         }
         poSpatSRS = &oSpatSRS;
     }
-
+    else if( psOptions->hClipSrc != NULL && psOptions->hSpatialFilter == NULL )
+    {
+        // Check OLCFastSpatialFilter
+        if (poDS->TestCapability(OLCFastSpatialFilter))
+            psOptions->hSpatialFilter = (OGRGeometryH)((OGRGeometry *)(psOptions->hClipSrc))->clone();
+    }
 /* -------------------------------------------------------------------- */
 /*      Create a transformation object from the source to               */
 /*      destination coordinate system.                                  */
