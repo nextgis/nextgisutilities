@@ -3632,6 +3632,15 @@ static bool IsInBBox(const std::vector<OGREnvelope> &aInBBox, const OGREnvelope 
     return false;
 }
 
+static bool IsIntersectsBBox(const std::vector<OGREnvelope> &aInBBox, const OGREnvelope &env)
+{
+    for(const OGREnvelope& testEnv : aInBBox) {
+        if(testEnv.Intersects(env))
+            return true;
+    }
+    return false;
+}
+
 static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeature,
                            TargetLayerInfo* psInfo,
                            OGRSpatialReference* poOutputSRS,
@@ -3640,12 +3649,15 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                            const GEOSPreparedGeometry* cutGeomPrepSrc,
                            GEOSGeom cutGeomSrc,
                            std::vector<OGREnvelope> &cutGeomSrcInBBox,
+                           std::vector<OGREnvelope> &cutGeomSrcIntBBox,
                            const GEOSPreparedGeometry* cutGeomPrepDst,
                            GEOSGeom cutGeomDst,
                            std::vector<OGREnvelope> &cutGeomDstInBBox,
+                           std::vector<OGREnvelope> &cutGeomDstIntBBox,
                            GIntBig& nFeaturesWritten,
                            GIntBig& nTotalEventsDone,
                            int& nFeaturesInTransaction,
+                           bool bFixGeom,
                            CPLMutex* hMutex)
 {
     OGRFeature *poDstFeature = NULL;
@@ -3837,14 +3849,24 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                 // check bbox
                 OGREnvelope env;
                 poDstGeometry->getEnvelope(&env);
+                if(!IsIntersectsBBox(cutGeomSrcIntBBox, env)) {
+                    goto end_loop;
+                }
+
                 if(!IsInBBox(cutGeomSrcInBBox, env)) {
                     char result = 0;
                     GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
                     bool wasInvalid = false;
                     if(nullptr != dstGeom) {
                         if(GEOSisValid_r(geosContext, dstGeom) == 0) {
-                            dstGeom = MakeValid(geosContext, dstGeom, static_cast<OGRwkbGeometryType>(eGType));
-                            wasInvalid = true;
+                            if(bFixGeom) {
+                                dstGeom = MakeValid(geosContext, dstGeom, static_cast<OGRwkbGeometryType>(eGType));
+                                wasInvalid = true;
+                            }
+                            else {
+                                GEOSGeom_destroy_r(geosContext, dstGeom);
+                                goto end_loop;
+                            }
                         }
 
                         if(nullptr != dstGeom) {
@@ -3870,6 +3892,9 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                         if(nullptr != cutGeom) {
                             poClipped = OGRGeometryFactory::createFromGEOS(geosContext, cutGeom);
                         }
+
+                        GEOSGeom_destroy_r(geosContext, dstGeom);
+                        GEOSGeom_destroy_r(geosContext, cutGeom);
 
                         delete poDstGeometry;
                         if (poClipped == NULL || poClipped->IsEmpty())
@@ -3939,6 +3964,10 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                 // check bbox
                 OGREnvelope env;
                 poDstGeometry->getEnvelope(&env);
+                if(!IsIntersectsBBox(cutGeomDstIntBBox, env)) {
+                    goto end_loop;
+                }
+
                 if(!IsInBBox(cutGeomDstInBBox, env)) {
 
                     char result = 0;
@@ -3946,8 +3975,14 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                     GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
                     if(nullptr != dstGeom) {
                         if(GEOSisValid_r(geosContext, dstGeom) == 0) {
-                            dstGeom = MakeValid(geosContext, dstGeom, static_cast<OGRwkbGeometryType>(eGType));
-                            wasInvalid = true;
+                            if(bFixGeom) {
+                                dstGeom = MakeValid(geosContext, dstGeom, static_cast<OGRwkbGeometryType>(eGType));
+                                wasInvalid = true;
+                            }
+                            else {
+                                GEOSGeom_destroy_r(geosContext, dstGeom);
+                                goto end_loop;
+                            }
                         }
 
                         if(nullptr != dstGeom) {
@@ -3972,6 +4007,8 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                             poClipped = OGRGeometryFactory::createFromGEOS(geosContext, cutGeom);
                         }
 
+                        GEOSGeom_destroy_r(geosContext, dstGeom);
+                        GEOSGeom_destroy_r(geosContext, cutGeom);
                         delete poDstGeometry;
                         if (poClipped == NULL || poClipped->IsEmpty())
                         {
@@ -3984,6 +4021,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                     else if(wasInvalid && nullptr != dstGeom) {
                         delete poDstGeometry;
                         poDstGeometry = OGRGeometryFactory::createFromGEOS(geosContext, dstGeom);
+                        GEOSGeom_destroy_r(geosContext, dstGeom);
                     }
                 }
             }
@@ -4088,12 +4126,15 @@ typedef struct _ProcessFeatureJob {
     const GEOSPreparedGeometry* cutGeomPrepSrc;
     GEOSGeom cutGeomSrc;
     std::vector<OGREnvelope> &cutGeomSrcInBBox;
+    std::vector<OGREnvelope> &cutGeomSrcIntersectBBox;
     const GEOSPreparedGeometry* cutGeomPrepDst;
     GEOSGeom cutGeomDst;
     std::vector<OGREnvelope> &cutGeomDstInBBox;
+    std::vector<OGREnvelope> &cutGeomDstIntersectBBox;
     GIntBig& nFeaturesWritten;
     GIntBig& nTotalEventsDone;
     int& nFeaturesInTransaction;
+    bool bFixGeom;
     CPLMutex* hMutex;
 } ProcessFeatureJob;
 
@@ -4101,15 +4142,16 @@ static void ProcessFeatureJobProcess(void* userData)
 {
     ProcessFeatureJob* const job = static_cast<ProcessFeatureJob*>(userData);
 
-    bool result = ProcessFeature(job->layerTranslator, job->poFeature, job->psInfo,
+    /*bool result =*/ ProcessFeature(job->layerTranslator, job->poFeature, job->psInfo,
                    job->poOutputSRS, job->psOptions, job->geosContext,
-                   job->cutGeomPrepSrc, job->cutGeomSrc, job->cutGeomSrcInBBox,
-                   job->cutGeomPrepDst, job->cutGeomDst, job->cutGeomDstInBBox,
+                   job->cutGeomPrepSrc, job->cutGeomSrc, job->cutGeomSrcInBBox, job->cutGeomSrcIntersectBBox,
+                   job->cutGeomPrepDst, job->cutGeomDst, job->cutGeomDstInBBox, job->cutGeomDstIntersectBBox,
                    job->nFeaturesWritten, job->nTotalEventsDone,
-                   job->nFeaturesInTransaction, job->hMutex);
+                   job->nFeaturesInTransaction, job->bFixGeom, job->hMutex);
 }
 
-static void CreateInternalEnvelope(std::vector<OGREnvelope>& aEnv, OGRGeometry* poGeom)
+static void FillIntersectEnvelopes(std::vector<OGREnvelope>& aEnv,
+                                  OGRGeometry* poGeom, const int nStep)
 {
     if(NULL == poGeom)
         return;
@@ -4120,13 +4162,78 @@ static void CreateInternalEnvelope(std::vector<OGREnvelope>& aEnv, OGRGeometry* 
         OGREnvelope env;
         poGeom->getEnvelope(&env);
 
-        const int step = 15;
+        double dfWidth = (env.MaxX - env.MinX);
+        double dfHeight = (env.MaxY - env.MinY);
+
+        double dfStepW = dfWidth / nStep;
+        double dfStepH = dfHeight / nStep;
+
+        double dfStep = MIN(dfStepW, dfStepH);
+
+        for(double i = env.MinX; i < env.MaxX; i += dfStep) {
+            for(double j = env.MinY; j < env.MaxY; j += dfStep) {
+                OGREnvelope testEnv;
+                testEnv.MinX = i;
+                testEnv.MaxX = i + dfStep;
+                testEnv.MinY = j;
+                testEnv.MaxY = j + dfStep;
+
+                OGRLinearRing* ring = new OGRLinearRing();
+                ring->addPoint(testEnv.MinX, testEnv.MinY);
+                ring->addPoint(testEnv.MinX, testEnv.MaxY);
+                ring->addPoint(testEnv.MaxX, testEnv.MaxY);
+                ring->addPoint(testEnv.MaxX, testEnv.MinY);
+                ring->closeRings();
+
+                OGRPolygon polygon;
+                polygon.addRingDirectly(ring);
+
+                if(poGeom->Intersects(&polygon)) {
+                    aEnv.push_back(testEnv);
+                }
+            }
+        }
+        return;
+    }
+    case wkbMultiPolygon:
+    {
+        OGRMultiPolygon* pMultyPolygon = static_cast<OGRMultiPolygon*>(poGeom);
+        for(int i = 0; i < pMultyPolygon->getNumGeometries(); ++i) {
+            FillIntersectEnvelopes(aEnv, pMultyPolygon->getGeometryRef(i), nStep);
+        }
+        return;
+    }
+    case wkbGeometryCollection:
+    {
+        OGRGeometryCollection* pGeometryCollection =
+                static_cast<OGRGeometryCollection*>(poGeom);
+        for(int i = 0; i < pGeometryCollection->getNumGeometries(); ++i) {
+            FillIntersectEnvelopes(aEnv, pGeometryCollection->getGeometryRef(i), nStep);
+        }
+        return;
+    }
+    default:
+        return;
+    }
+}
+
+static void FillInternalEnvelopes(std::vector<OGREnvelope>& aEnv,
+                                  OGRGeometry* poGeom, const int nStep)
+{
+    if(NULL == poGeom)
+        return;
+
+    switch ( wkbFlatten(poGeom->getGeometryType()) ) {
+    case wkbPolygon: // Do the work
+    {
+        OGREnvelope env;
+        poGeom->getEnvelope(&env);
 
         double dfWidth = (env.MaxX - env.MinX);
         double dfHeight = (env.MaxY - env.MinY);
 
-        double dfStepW = dfWidth / step;
-        double dfStepH = dfHeight / step;
+        double dfStepW = dfWidth / nStep;
+        double dfStepH = dfHeight / nStep;
 
         double dfStep = MIN(dfStepW, dfStepH);
         double dfHStep = dfStep * 0.55;
@@ -4160,7 +4267,7 @@ static void CreateInternalEnvelope(std::vector<OGREnvelope>& aEnv, OGRGeometry* 
     {
         OGRMultiPolygon* pMultyPolygon = static_cast<OGRMultiPolygon*>(poGeom);
         for(int i = 0; i < pMultyPolygon->getNumGeometries(); ++i) {
-            CreateInternalEnvelope(aEnv, pMultyPolygon->getGeometryRef(i));
+            FillInternalEnvelopes(aEnv, pMultyPolygon->getGeometryRef(i), nStep);
         }
         return;
     }
@@ -4169,7 +4276,7 @@ static void CreateInternalEnvelope(std::vector<OGREnvelope>& aEnv, OGRGeometry* 
         OGRGeometryCollection* pGeometryCollection =
                 static_cast<OGRGeometryCollection*>(poGeom);
         for(int i = 0; i < pGeometryCollection->getNumGeometries(); ++i) {
-            CreateInternalEnvelope(aEnv, pGeometryCollection->getGeometryRef(i));
+            FillInternalEnvelopes(aEnv, pGeometryCollection->getGeometryRef(i), nStep);
         }
         return;
     }
@@ -4193,7 +4300,7 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
 {
 
     // Setup thread pool.
-    int nThreads = CPLGetNumCPUs();
+    int nThreads = CPLGetNumCPUs() - 1;
     const char* pszNumThreads = CPLGetConfigOption("GDAL_NUM_THREADS", NULL);
     if( pszNumThreads )
     {
@@ -4228,22 +4335,32 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
     const GEOSPreparedGeometry* cutGeomPrepSrc = nullptr;
     GEOSGeom cutGeomSrc = nullptr;
     std::vector<OGREnvelope> cutGeomSrcInBBox, cutGeomDstInBBox;
+    std::vector<OGREnvelope> cutGeomSrcIntersectBBox, cutGeomDstIntersectBBox;
+
+    int nStep = psOptions->nClipStep;
+
     if(m_poClipSrc) {
         cutGeomSrc = m_poClipSrc->exportToGEOS(geosContext);
         cutGeomPrepSrc = GEOSPrepare_r(geosContext, cutGeomSrc);
-        CreateInternalEnvelope(cutGeomSrcInBBox, m_poClipSrc);
+        FillInternalEnvelopes(cutGeomSrcInBBox, m_poClipSrc, nStep);
+        FillIntersectEnvelopes(cutGeomSrcIntersectBBox, m_poClipSrc, nStep);
     }
     const GEOSPreparedGeometry* cutGeomPrepDst = nullptr;
     GEOSGeom cutGeomDst = nullptr;
     if(m_poClipDst) {
         cutGeomDst = m_poClipDst->exportToGEOS(geosContext);
         cutGeomPrepDst = GEOSPrepare_r(geosContext, cutGeomDst);
-        CreateInternalEnvelope(cutGeomDstInBBox, m_poClipDst);
+        FillInternalEnvelopes(cutGeomDstInBBox, m_poClipDst, nStep);
+        FillIntersectEnvelopes(cutGeomDstIntersectBBox, m_poClipSrc, nStep);
     }
 
-    CPLDebug("NextGIS Cutter", "Using %d src bbox and %d dst bbox",
+    CPLDebug("NextGIS Cutter", "Using %d src in bboxes and %d dst in bboxes",
                 static_cast<int>(cutGeomSrcInBBox.size()),
                 static_cast<int>(cutGeomDstInBBox.size())
+             );
+    CPLDebug("NextGIS Cutter", "Using %d src intersect bboxes and %d dst intersect bboxes",
+                static_cast<int>(cutGeomSrcIntersectBBox.size()),
+                static_cast<int>(cutGeomDstIntersectBBox.size())
              );
 
     poSrcLayer = psInfo->poSrcLayer;
@@ -4318,22 +4435,26 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
                                                             cutGeomPrepSrc,
                                                             cutGeomSrc,
                                                             cutGeomSrcInBBox,
+                                                            cutGeomSrcIntersectBBox,
                                                             cutGeomPrepDst,
                                                             cutGeomDst,
                                                             cutGeomDstInBBox,
+                                                            cutGeomDstIntersectBBox,
                                                             nFeaturesWritten,
                                                             nTotalEventsDone,
                                                             nFeaturesInTransaction,
+                                                            psOptions->bFixGeometries,
                                                             hMutex});
             poThreadPool->SubmitJob(ProcessFeatureJobProcess, job);
             jobs.push_back(job);
         }
         else {
             if(!ProcessFeature(this, poFeature, psInfo, poOutputSRS, psOptions,
-                               geosContext, cutGeomPrepSrc, cutGeomSrc, cutGeomSrcInBBox,
-                               cutGeomPrepDst, cutGeomDst, cutGeomDstInBBox,
+                               geosContext,
+                               cutGeomPrepSrc, cutGeomSrc, cutGeomSrcInBBox, cutGeomSrcIntersectBBox,
+                               cutGeomPrepDst, cutGeomDst, cutGeomDstInBBox, cutGeomDstIntersectBBox,
                                nFeaturesWritten, nTotalEventsDone,
-                               nFeaturesInTransaction, hMutex)) {
+                               nFeaturesInTransaction, psOptions->bFixGeometries, hMutex)) {
                 return false;
             }
         }
@@ -4434,6 +4555,7 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
 
     psOptions->eAccessMode = ACCESS_CREATION;
     psOptions->bFixGeometries = false;
+    psOptions->nClipStep = 15;
     psOptions->bSkipFailures = false;
     psOptions->nLayerTransaction = -1;
     psOptions->bForceTransaction = false;
@@ -4549,6 +4671,10 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
         else if( STARTS_WITH_CI(papszArgv[i], "-fix") )
         {
             psOptions->bFixGeometries = true;
+        }
+        else if( i+1 < nArgc && EQUAL(papszArgv[i],"-clipstep") )
+        {
+            psOptions->nClipStep = atoi(papszArgv[++i]);
         }
         else if( EQUAL(papszArgv[i],"-append") )
         {

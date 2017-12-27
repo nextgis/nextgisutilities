@@ -382,6 +382,8 @@ struct GDALVectorTranslateOptions
 
     /*! Maximum number of features, or -1 if no limit. */
     GIntBig nLimit;
+
+    int nClipStep;
 };
 
 class SetupTargetLayer
