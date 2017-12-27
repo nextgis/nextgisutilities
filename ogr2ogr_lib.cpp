@@ -4120,7 +4120,7 @@ static void CreateInternalEnvelope(std::vector<OGREnvelope>& aEnv, OGRGeometry* 
         OGREnvelope env;
         poGeom->getEnvelope(&env);
 
-        const int step = 12;
+        const int step = 15;
 
         double dfWidth = (env.MaxX - env.MinX);
         double dfHeight = (env.MaxY - env.MinY);
