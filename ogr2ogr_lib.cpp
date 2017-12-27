@@ -3907,6 +3907,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                     else if(wasInvalid && nullptr != dstGeom) {
                         delete poDstGeometry;
                         poDstGeometry = OGRGeometryFactory::createFromGEOS(geosContext, dstGeom);
+                        GEOSGeom_destroy_r(geosContext, dstGeom);
                     }
                 }
             }
