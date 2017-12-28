@@ -4190,7 +4190,16 @@ static void FillIntersectEnvelopes(std::vector<OGREnvelope>& aEnv,
                 polygon.addRingDirectly(ring);
 
                 if(poGeom->Intersects(&polygon)) {
-                    aEnv.push_back(testEnv);
+                    bool add = true;
+                    for(const OGREnvelope& existsEnv : aEnv) {
+                        if(existsEnv.Contains(testEnv)) {
+                            add = false;
+                            break;
+                        }
+                    }
+                    if(add) {
+                        aEnv.push_back(testEnv);
+                    }
                 }
             }
         }
@@ -4258,7 +4267,16 @@ static void FillInternalEnvelopes(std::vector<OGREnvelope>& aEnv,
                 polygon.addRingDirectly(ring);
 
                 if(poGeom->Contains(&polygon)) {
-                    aEnv.push_back(testEnv);
+                    bool add = true;
+                    for(const OGREnvelope& existsEnv : aEnv) {
+                        if(existsEnv.Contains(testEnv)) {
+                            add = false;
+                            break;
+                        }
+                    }
+                    if(add) {
+                        aEnv.push_back(testEnv);
+                    }
                 }
             }
         }
