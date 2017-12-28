@@ -3629,24 +3629,6 @@ static bool SetupCT( TargetLayerInfo* psInfo,
     return true;
 }
 
-static bool IsInBBox(const std::vector<OGREnvelope> &aInBBox, const OGREnvelope &env)
-{
-    for(const OGREnvelope& testEnv : aInBBox) {
-        if(testEnv.Contains(env))
-            return true;
-    }
-    return false;
-}
-
-static bool IsIntersectsBBox(const std::vector<OGREnvelope> &aInBBox, const OGREnvelope &env)
-{
-    for(const OGREnvelope& testEnv : aInBBox) {
-        if(testEnv.Intersects(env))
-            return true;
-    }
-    return false;
-}
-
 static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeature,
                            TargetLayerInfo* psInfo,
                            OGRSpatialReference* poOutputSRS,
@@ -3654,12 +3636,8 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                            GEOSContextHandle_t geosContext,
                            const GEOSPreparedGeometry* cutGeomPrepSrc,
                            GEOSGeom cutGeomSrc,
-                           std::vector<OGREnvelope> &cutGeomSrcInBBox,
-                           std::vector<OGREnvelope> &cutGeomSrcIntBBox,
                            const GEOSPreparedGeometry* cutGeomPrepDst,
                            GEOSGeom cutGeomDst,
-                           std::vector<OGREnvelope> &cutGeomDstInBBox,
-                           std::vector<OGREnvelope> &cutGeomDstIntBBox,
                            GIntBig& nFeaturesWritten,
                            GIntBig& nTotalEventsDone,
                            int& nFeaturesInTransaction,
@@ -3851,56 +3829,48 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
             }
 
             if (layerTranslator->m_poClipSrc)
-            {
-                // check bbox
-                OGREnvelope env;
-                poDstGeometry->getEnvelope(&env);
-                if(!IsIntersectsBBox(cutGeomSrcIntBBox, env)) {
-                    psInfo->nFeaturesOutOfClip++;
-                    goto end_loop;
-                }
+            {                
+                char result = 0;
+                GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
+                bool wasInvalid = false;
 
-                if(IsInBBox(cutGeomSrcInBBox, env)) {
-                    psInfo->nFeaturesInsideClip++;
+                if(nullptr != dstGeom) {
+                    // Check if valid
+                    if(GEOSisValid_r(geosContext, dstGeom) == 0) {
+                        if(bFixGeom) {
+                            dstGeom = MakeValid(geosContext, dstGeom,
+                                                static_cast<OGRwkbGeometryType>(eGType));
+                            wasInvalid = true;
+                        }
+                        else {
+                            delete poDstGeometry;
+                            GEOSGeom_destroy_r(geosContext, dstGeom);
+                            psInfo->nFeaturesSkipClip++;
+                            goto end_loop;
+                        }
+                    }
+
+                    // Check if geom within cut geom
+                    if(nullptr != dstGeom) {
+                        CPLMutexHolder holder(hMutex, 10.5);
+                        result = GEOSPreparedContains_r(geosContext,
+                                                        cutGeomPrepSrc,
+                                                        dstGeom);
+                    }
                 }
                 else {
-                    char result = 0;
-                    GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
-                    bool wasInvalid = false;
+                    CPLError( CE_Failure, CPLE_AppDefined,
+                              "Failed to exportToGEOS feature " CPL_FRMT_GIB
+                              " (geometry probably is invalid).",
+                              poFeature->GetFID() );
 
-                    if(nullptr != dstGeom) {
-                        if(GEOSisValid_r(geosContext, dstGeom) == 0) {
-                            if(bFixGeom) {
-                                dstGeom = MakeValid(geosContext, dstGeom,
-                                                    static_cast<OGRwkbGeometryType>(eGType));
-                                wasInvalid = true;
-                            }
-                            else {
-                                delete poDstGeometry;
-                                GEOSGeom_destroy_r(geosContext, dstGeom);
-                                psInfo->nFeaturesSkipClip++;
-                                goto end_loop;
-                            }
-                        }
+                    psInfo->nFeaturesSkipClip++;
+                }
 
-                        if(nullptr != dstGeom) {
-                            CPLMutexHolder holder(hMutex, 10.5);
-                            result = GEOSPreparedContains_r(geosContext,
-                                                            cutGeomPrepSrc,
-                                                            dstGeom);
-                        }
-                    }
-                    else {
-                        CPLError( CE_Failure, CPLE_AppDefined,
-                                  "Failed to exportToGEOS feature " CPL_FRMT_GIB
-                                  " (geometry probably is invalid).",
-                                  poFeature->GetFID() );
-                    }
-
-
-                    if(result != 1 && nullptr != dstGeom) {
+                if(nullptr != dstGeom) {
+                    if(result != 1) {
                         // Check intersection
-                        CPLMutexHolder holder(hMutex, 10.5);
+                        CPLMutexHolder holder(hMutex, 300);
                         if(GEOSPreparedIntersects_r(geosContext, cutGeomPrepSrc,
                                                     dstGeom) == 1) {
                             GEOSGeom cutGeom = GEOSIntersection_r(geosContext,
@@ -3913,7 +3883,6 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                                                                            cutGeom);
                             }
 
-                            GEOSGeom_destroy_r(geosContext, dstGeom);
                             GEOSGeom_destroy_r(geosContext, cutGeom);
 
                             delete poDstGeometry;
@@ -3921,6 +3890,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                             {
                                 delete poClipped;
                                 psInfo->nFeaturesSkipClip++;
+                                GEOSGeom_destroy_r(geosContext, dstGeom);
                                 goto end_loop;
                             }
                             poDstGeometry = poClipped;
@@ -3928,19 +3898,19 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                         }
                         else {
                             delete poDstGeometry;
-                            GEOSGeom_destroy_r(geosContext, dstGeom);
                             psInfo->nFeaturesOutOfClip++;
+                            GEOSGeom_destroy_r(geosContext, dstGeom);
                             goto end_loop;
                         }
                     }
                     else if(wasInvalid && nullptr != dstGeom) {
                         delete poDstGeometry;
                         poDstGeometry = OGRGeometryFactory::createFromGEOS(geosContext, dstGeom);
-                        GEOSGeom_destroy_r(geosContext, dstGeom);
                     }
                     else {
                         psInfo->nFeaturesInsideClip++;
                     }
+                    GEOSGeom_destroy_r(geosContext, dstGeom);
                 }
             }
 
@@ -3994,50 +3964,38 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                 if( poDstGeometry == NULL )
                     goto end_loop;
 
-                // check bbox
-                OGREnvelope env;
-                poDstGeometry->getEnvelope(&env);
-                if(!IsIntersectsBBox(cutGeomDstIntBBox, env)) {
-                    goto end_loop;
-                }
+                char result = 0;
+                bool wasInvalid = false;
+                GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
 
-                if(!IsInBBox(cutGeomDstInBBox, env)) {
-                    char result = 0;
-                    bool wasInvalid = false;
-                    GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
+                if(nullptr != dstGeom) {
+                    if(GEOSisValid_r(geosContext, dstGeom) == 0) {
+                        if(bFixGeom) {
+                            dstGeom = MakeValid(geosContext, dstGeom, static_cast<OGRwkbGeometryType>(eGType));
+                            wasInvalid = true;
+                        }
+                        else {
+                            delete poDstGeometry;
+                            psInfo->nFeaturesSkipClip++;
+                            GEOSGeom_destroy_r(geosContext, dstGeom);
+                            goto end_loop;
+                        }
+                    }
 
                     if(nullptr != dstGeom) {
-                        if(GEOSisValid_r(geosContext, dstGeom) == 0) {
-                            if(bFixGeom) {
-                                dstGeom = MakeValid(geosContext, dstGeom, static_cast<OGRwkbGeometryType>(eGType));
-                                wasInvalid = true;
-                            }
-                            else {
-                                delete poDstGeometry;
-                                GEOSGeom_destroy_r(geosContext, dstGeom);
-                                psInfo->nFeaturesSkipClip++;
-                                goto end_loop;
-                            }
-                        }
-
-                        if(nullptr != dstGeom) {
-                            if(hMutex) {
-                                CPLAcquireMutex(hMutex, 0.7);
-                            }
-                            result = GEOSPreparedContains_r(geosContext, cutGeomPrepDst, dstGeom);
-                            if(hMutex) {
-                                CPLReleaseMutex(hMutex);
-                            }
-                        }
+                        CPLMutexHolder holder(hMutex, 15);
+                        result = GEOSPreparedContains_r(geosContext, cutGeomPrepDst, dstGeom);
                     }
-                    else {
-                        CPLError( CE_Failure, CPLE_AppDefined, "Failed to exportToGEOS feature " CPL_FRMT_GIB " (geometry probably is invalid).",
-                                  poFeature->GetFID() );
-                    }
+                }
+                else {
+                    CPLError( CE_Failure, CPLE_AppDefined, "Failed to exportToGEOS feature " CPL_FRMT_GIB " (geometry probably is invalid).",
+                              poFeature->GetFID() );
+                    psInfo->nFeaturesInsideClip++;
+                }
 
-
-                    if(result != 1 && nullptr != dstGeom) {
-                        CPLMutexHolder holder(hMutex, 10.5);
+                if(nullptr != dstGeom) {
+                    if(result != 1) {
+                        CPLMutexHolder holder(hMutex, 350.5);
                         if(GEOSPreparedIntersects_r(geosContext, cutGeomPrepDst,
                                                     dstGeom) == 1) {
                             GEOSGeom cutGeom = GEOSIntersection_r(geosContext,
@@ -4049,12 +4007,12 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                                                                            cutGeom);
                             }
 
-                            GEOSGeom_destroy_r(geosContext, dstGeom);
                             GEOSGeom_destroy_r(geosContext, cutGeom);
                             delete poDstGeometry;
                             if (poClipped == NULL || poClipped->IsEmpty())
                             {
                                 delete poClipped;
+                                GEOSGeom_destroy_r(geosContext, dstGeom);
                                 goto end_loop;
                             }
 
@@ -4062,16 +4020,16 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                         }
                         else {
                             delete poDstGeometry;
-                            GEOSGeom_destroy_r(geosContext, dstGeom);
                             psInfo->nFeaturesOutOfClip++;
+                            GEOSGeom_destroy_r(geosContext, dstGeom);
                             goto end_loop;
                         }
                     }
                     else if(wasInvalid && nullptr != dstGeom) {
                         delete poDstGeometry;
                         poDstGeometry = OGRGeometryFactory::createFromGEOS(geosContext, dstGeom);
-                        GEOSGeom_destroy_r(geosContext, dstGeom);
                     }
+                    GEOSGeom_destroy_r(geosContext, dstGeom);
                 }
             }
 
@@ -4193,12 +4151,8 @@ typedef struct _ProcessFeatureJob {
     GEOSContextHandle_t geosContext;
     const GEOSPreparedGeometry* cutGeomPrepSrc;
     GEOSGeom cutGeomSrc;
-    std::vector<OGREnvelope> &cutGeomSrcInBBox;
-    std::vector<OGREnvelope> &cutGeomSrcIntersectBBox;
     const GEOSPreparedGeometry* cutGeomPrepDst;
     GEOSGeom cutGeomDst;
-    std::vector<OGREnvelope> &cutGeomDstInBBox;
-    std::vector<OGREnvelope> &cutGeomDstIntersectBBox;
     GIntBig& nFeaturesWritten;
     GIntBig& nTotalEventsDone;
     int& nFeaturesInTransaction;
@@ -4212,163 +4166,10 @@ static void ProcessFeatureJobProcess(void* userData)
 
     /*bool result =*/ ProcessFeature(job->layerTranslator, job->poFeature, job->psInfo,
                    job->poOutputSRS, job->psOptions, job->geosContext,
-                   job->cutGeomPrepSrc, job->cutGeomSrc, job->cutGeomSrcInBBox, job->cutGeomSrcIntersectBBox,
-                   job->cutGeomPrepDst, job->cutGeomDst, job->cutGeomDstInBBox, job->cutGeomDstIntersectBBox,
+                   job->cutGeomPrepSrc, job->cutGeomSrc,
+                   job->cutGeomPrepDst, job->cutGeomDst,
                    job->nFeaturesWritten, job->nTotalEventsDone,
                    job->nFeaturesInTransaction, job->bFixGeom, job->hMutex);
-}
-
-static void FillIntersectEnvelopes(std::vector<OGREnvelope>& aEnv,
-                                  OGRGeometry* poGeom, const int nStep)
-{
-    if(NULL == poGeom)
-        return;
-
-    switch ( wkbFlatten(poGeom->getGeometryType()) ) {
-    case wkbPolygon: // Do the work
-    {
-        OGREnvelope env;
-        poGeom->getEnvelope(&env);
-
-        double dfWidth = (env.MaxX - env.MinX);
-        double dfHeight = (env.MaxY - env.MinY);
-
-        double dfStepW = dfWidth / nStep;
-        double dfStepH = dfHeight / nStep;
-
-        double dfStep = MIN(dfStepW, dfStepH);
-
-        for(double i = env.MinX; i < env.MaxX; i += dfStep) {
-            for(double j = env.MinY; j < env.MaxY; j += dfStep) {
-                OGREnvelope testEnv;
-                testEnv.MinX = i;
-                testEnv.MaxX = i + dfStep;
-                testEnv.MinY = j;
-                testEnv.MaxY = j + dfStep;
-
-                OGRLinearRing* ring = new OGRLinearRing();
-                ring->addPoint(testEnv.MinX, testEnv.MinY);
-                ring->addPoint(testEnv.MinX, testEnv.MaxY);
-                ring->addPoint(testEnv.MaxX, testEnv.MaxY);
-                ring->addPoint(testEnv.MaxX, testEnv.MinY);
-                ring->closeRings();
-
-                OGRPolygon polygon;
-                polygon.addRingDirectly(ring);
-
-                if(poGeom->Intersects(&polygon)) {
-                    bool add = true;
-                    for(const OGREnvelope& existsEnv : aEnv) {
-                        if(existsEnv.Contains(testEnv)) {
-                            add = false;
-                            break;
-                        }
-                    }
-                    if(add) {
-                        aEnv.push_back(testEnv);
-                    }
-                }
-            }
-        }
-        return;
-    }
-    case wkbMultiPolygon:
-    {
-        OGRMultiPolygon* pMultyPolygon = static_cast<OGRMultiPolygon*>(poGeom);
-        for(int i = 0; i < pMultyPolygon->getNumGeometries(); ++i) {
-            FillIntersectEnvelopes(aEnv, pMultyPolygon->getGeometryRef(i), nStep);
-        }
-        return;
-    }
-    case wkbGeometryCollection:
-    {
-        OGRGeometryCollection* pGeometryCollection =
-                static_cast<OGRGeometryCollection*>(poGeom);
-        for(int i = 0; i < pGeometryCollection->getNumGeometries(); ++i) {
-            FillIntersectEnvelopes(aEnv, pGeometryCollection->getGeometryRef(i), nStep);
-        }
-        return;
-    }
-    default:
-        return;
-    }
-}
-
-static void FillInternalEnvelopes(std::vector<OGREnvelope>& aEnv,
-                                  OGRGeometry* poGeom, const int nStep)
-{
-    if(NULL == poGeom)
-        return;
-
-    switch ( wkbFlatten(poGeom->getGeometryType()) ) {
-    case wkbPolygon: // Do the work
-    {
-        OGREnvelope env;
-        poGeom->getEnvelope(&env);
-
-        double dfWidth = (env.MaxX - env.MinX);
-        double dfHeight = (env.MaxY - env.MinY);
-
-        double dfStepW = dfWidth / nStep;
-        double dfStepH = dfHeight / nStep;
-
-        double dfStep = MIN(dfStepW, dfStepH);
-        double dfHStep = dfStep * 0.55;
-
-        for(double i = env.MinX; i < env.MaxX; i += dfStep) {
-            for(double j = env.MinY; j < env.MaxY; j += dfStep) {
-                OGREnvelope testEnv;
-                testEnv.MinX = i;
-                testEnv.MaxX = i + dfHStep;
-                testEnv.MinY = j;
-                testEnv.MaxY = j + dfHStep;
-
-                OGRLinearRing* ring = new OGRLinearRing();
-                ring->addPoint(testEnv.MinX, testEnv.MinY);
-                ring->addPoint(testEnv.MinX, testEnv.MaxY);
-                ring->addPoint(testEnv.MaxX, testEnv.MaxY);
-                ring->addPoint(testEnv.MaxX, testEnv.MinY);
-                ring->closeRings();
-
-                OGRPolygon polygon;
-                polygon.addRingDirectly(ring);
-
-                if(poGeom->Contains(&polygon)) {
-                    bool add = true;
-                    for(const OGREnvelope& existsEnv : aEnv) {
-                        if(existsEnv.Contains(testEnv)) {
-                            add = false;
-                            break;
-                        }
-                    }
-                    if(add) {
-                        aEnv.push_back(testEnv);
-                    }
-                }
-            }
-        }
-        return;
-    }
-    case wkbMultiPolygon:
-    {
-        OGRMultiPolygon* pMultyPolygon = static_cast<OGRMultiPolygon*>(poGeom);
-        for(int i = 0; i < pMultyPolygon->getNumGeometries(); ++i) {
-            FillInternalEnvelopes(aEnv, pMultyPolygon->getGeometryRef(i), nStep);
-        }
-        return;
-    }
-    case wkbGeometryCollection:
-    {
-        OGRGeometryCollection* pGeometryCollection =
-                static_cast<OGRGeometryCollection*>(poGeom);
-        for(int i = 0; i < pGeometryCollection->getNumGeometries(); ++i) {
-            FillInternalEnvelopes(aEnv, pGeometryCollection->getGeometryRef(i), nStep);
-        }
-        return;
-    }
-    default:
-        return;
-    }
 }
 
 /************************************************************************/
@@ -4420,34 +4221,17 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
     GEOSContextHandle_t geosContext = OGRGeometry::createGEOSContext();
     const GEOSPreparedGeometry* cutGeomPrepSrc = nullptr;
     GEOSGeom cutGeomSrc = nullptr;
-    std::vector<OGREnvelope> cutGeomSrcInBBox, cutGeomDstInBBox;
-    std::vector<OGREnvelope> cutGeomSrcIntersectBBox, cutGeomDstIntersectBBox;
-
-    int nStep = psOptions->nClipStep;
 
     if(m_poClipSrc) {
         cutGeomSrc = m_poClipSrc->exportToGEOS(geosContext);
         cutGeomPrepSrc = GEOSPrepare_r(geosContext, cutGeomSrc);
-        FillInternalEnvelopes(cutGeomSrcInBBox, m_poClipSrc, nStep);
-        FillIntersectEnvelopes(cutGeomSrcIntersectBBox, m_poClipSrc, nStep);
     }
     const GEOSPreparedGeometry* cutGeomPrepDst = nullptr;
     GEOSGeom cutGeomDst = nullptr;
     if(m_poClipDst) {
         cutGeomDst = m_poClipDst->exportToGEOS(geosContext);
         cutGeomPrepDst = GEOSPrepare_r(geosContext, cutGeomDst);
-        FillInternalEnvelopes(cutGeomDstInBBox, m_poClipDst, nStep);
-        FillIntersectEnvelopes(cutGeomDstIntersectBBox, m_poClipSrc, nStep);
     }
-
-    CPLDebug("NextGIS Cutter", "Using %d src in bboxes and %d dst in bboxes",
-                static_cast<int>(cutGeomSrcInBBox.size()),
-                static_cast<int>(cutGeomDstInBBox.size())
-             );
-    CPLDebug("NextGIS Cutter", "Using %d src intersect bboxes and %d dst intersect bboxes",
-                static_cast<int>(cutGeomSrcIntersectBBox.size()),
-                static_cast<int>(cutGeomDstIntersectBBox.size())
-             );
 
     poSrcLayer = psInfo->poSrcLayer;
     poDstLayer = psInfo->poDstLayer;
@@ -4520,12 +4304,8 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
                                                             psOptions, geosContext,
                                                             cutGeomPrepSrc,
                                                             cutGeomSrc,
-                                                            cutGeomSrcInBBox,
-                                                            cutGeomSrcIntersectBBox,
                                                             cutGeomPrepDst,
                                                             cutGeomDst,
-                                                            cutGeomDstInBBox,
-                                                            cutGeomDstIntersectBBox,
                                                             nFeaturesWritten,
                                                             nTotalEventsDone,
                                                             nFeaturesInTransaction,
@@ -4537,8 +4317,8 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
         else {
             if(!ProcessFeature(this, poFeature, psInfo, poOutputSRS, psOptions,
                                geosContext,
-                               cutGeomPrepSrc, cutGeomSrc, cutGeomSrcInBBox, cutGeomSrcIntersectBBox,
-                               cutGeomPrepDst, cutGeomDst, cutGeomDstInBBox, cutGeomDstIntersectBBox,
+                               cutGeomPrepSrc, cutGeomSrc,
+                               cutGeomPrepDst, cutGeomDst,
                                nFeaturesWritten, nTotalEventsDone,
                                nFeaturesInTransaction, psOptions->bFixGeometries, hMutex)) {
                 return false;
@@ -4641,7 +4421,6 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
 
     psOptions->eAccessMode = ACCESS_CREATION;
     psOptions->bFixGeometries = false;
-    psOptions->nClipStep = 15;
     psOptions->bSkipFailures = false;
     psOptions->nLayerTransaction = -1;
     psOptions->bForceTransaction = false;
@@ -4757,10 +4536,6 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
         else if( STARTS_WITH_CI(papszArgv[i], "-fix") )
         {
             psOptions->bFixGeometries = true;
-        }
-        else if( i+1 < nArgc && EQUAL(papszArgv[i],"-clipstep") )
-        {
-            psOptions->nClipStep = atoi(papszArgv[++i]);
         }
         else if( EQUAL(papszArgv[i],"-append") )
         {
