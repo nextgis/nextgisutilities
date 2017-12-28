@@ -3977,35 +3977,31 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                 }
 
                 if(!IsInBBox(cutGeomDstInBBox, env)) {
-
                     char result = 0;
                     bool wasInvalid = false;
                     GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
-                    if(nullptr != dstGeom) {
-                        if(GEOSisValid_r(geosContext, dstGeom) == 0) {
-                            if(bFixGeom) {
+                    if(bFixGeom) {
+                        if(nullptr != dstGeom) {
+                            if(GEOSisValid_r(geosContext, dstGeom) == 0) {
                                 dstGeom = MakeValid(geosContext, dstGeom, static_cast<OGRwkbGeometryType>(eGType));
                                 wasInvalid = true;
-                            }
-                            else {
-                                GEOSGeom_destroy_r(geosContext, dstGeom);
-                                goto end_loop;
-                            }
-                        }
 
-                        if(nullptr != dstGeom) {
-                            if(hMutex) {
-                                CPLAcquireMutex(hMutex, 0.7);
                             }
-                            result = GEOSPreparedContains_r(geosContext, cutGeomPrepDst, dstGeom);
-                            if(hMutex) {
-                                CPLReleaseMutex(hMutex);
+
+                            if(nullptr != dstGeom) {
+                                if(hMutex) {
+                                    CPLAcquireMutex(hMutex, 0.7);
+                                }
+                                result = GEOSPreparedContains_r(geosContext, cutGeomPrepDst, dstGeom);
+                                if(hMutex) {
+                                    CPLReleaseMutex(hMutex);
+                                }
                             }
                         }
-                    }
-                    else {
-                        CPLError( CE_Failure, CPLE_AppDefined, "Failed to exportToGEOS feature " CPL_FRMT_GIB " (geometry probably is invalid).",
-                                  poFeature->GetFID() );
+                        else {
+                            CPLError( CE_Failure, CPLE_AppDefined, "Failed to exportToGEOS feature " CPL_FRMT_GIB " (geometry probably is invalid).",
+                                      poFeature->GetFID() );
+                        }
                     }
 
                     if(result != 1 && nullptr != dstGeom) {
@@ -4072,7 +4068,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
             }
 
             // Report progress
-            if(nFeaturesWritten % 1000 == 0) {
+            if(nFeaturesWritten % 10000 == 0) {
                 CPLDebug("NextGIS Cutter", "Features read: " CPL_FRMT_GIB " / write: " CPL_FRMT_GIB "\nOut of clip bbox: " CPL_FRMT_GIB ", Inside clip bbox: " CPL_FRMT_GIB ", Clipped: " CPL_FRMT_GIB ", Scipped: " CPL_FRMT_GIB,
                          psInfo->nFeaturesRead, nFeaturesWritten,
                          psInfo->nFeaturesOutOfClip, psInfo->nFeaturesInsideClip,
