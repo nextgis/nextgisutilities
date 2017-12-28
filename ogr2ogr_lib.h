@@ -115,7 +115,7 @@ typedef struct
     int          iSrcFIDField;
     int          iRequestedSrcGeomField;
     bool         bPreserveFID;
-    GIntBig      nFeaturesOutOfClip, nFeaturesInsideClip, nFeaturesClipped, nFeaturesScipClip;
+    GIntBig      nFeaturesOutOfClip, nFeaturesInsideClip, nFeaturesClipped, nFeaturesSkipClip;
 } TargetLayerInfo;
 
 typedef struct

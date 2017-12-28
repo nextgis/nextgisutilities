@@ -4069,8 +4069,11 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
 
             // Report progress
             if(nFeaturesWritten % 10000 == 0) {
-                CPLDebug("NextGIS Cutter", "Features read: " CPL_FRMT_GIB " / write: " CPL_FRMT_GIB " - %f %%\nOut of clip bbox: " CPL_FRMT_GIB ", Inside clip bbox: " CPL_FRMT_GIB ", Clipped: " CPL_FRMT_GIB ", Skipped: " CPL_FRMT_GIB,
-                         psInfo->nFeaturesRead, nFeaturesWritten, double(nFeaturesWritten + psInfo->nFeaturesOutOfClip + psInfo->nFeaturesSkipClip) / psInfo->nFeaturesRead * 100.0,
+                CPLDebug("NextGIS Cutter", "Features read: " CPL_FRMT_GIB
+                         " / write: " CPL_FRMT_GIB " - %f.2 %%\nOut of clip bbox: " CPL_FRMT_GIB
+                         ", Inside clip bbox: " CPL_FRMT_GIB ", Clipped: " CPL_FRMT_GIB ", Skipped: " CPL_FRMT_GIB,
+                         psInfo->nFeaturesRead, nFeaturesWritten,
+                         double(nFeaturesWritten + psInfo->nFeaturesOutOfClip + psInfo->nFeaturesSkipClip) / psInfo->nFeaturesRead * 100.0,
                          psInfo->nFeaturesOutOfClip, psInfo->nFeaturesInsideClip,
                          psInfo->nFeaturesClipped, psInfo->nFeaturesSkipClip);
             }
