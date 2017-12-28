@@ -3899,7 +3899,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
 
 
                     if(result != 1 && nullptr != dstGeom) {
-                        // Checked intersection
+                        // Check intersection
                         CPLMutexHolder holder(hMutex, 10.5);
                         if(GEOSPreparedIntersects_r(geosContext, cutGeomPrepSrc,
                                                     dstGeom) == 1) {
