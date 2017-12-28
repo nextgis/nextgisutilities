@@ -3456,6 +3456,11 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
         psInfo->iRequestedSrcGeomField = -1;
     psInfo->bPreserveFID = bPreserveFID;
 
+    psInfo->nFeaturesClipped = 0;
+    psInfo->nFeaturesInsideClip = 0;
+    psInfo->nFeaturesOutOfClip = 0;
+    psInfo->nFeaturesScipClip = 0;
+
     return psInfo;
 }
 
@@ -3850,40 +3855,37 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                 OGREnvelope env;
                 poDstGeometry->getEnvelope(&env);
                 if(!IsIntersectsBBox(cutGeomSrcIntBBox, env)) {
+                    psInfo->nFeaturesOutOfClip++;
                     goto end_loop;
                 }
 
-                if(!IsInBBox(cutGeomSrcInBBox, env)) {
+                if(IsInBBox(cutGeomSrcInBBox, env)) {
+                    psInfo->nFeaturesInsideClip++;
+                }
+                else {
                     char result = 0;
                     GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
                     bool wasInvalid = false;
-                    if(nullptr != dstGeom) {
-                        if(GEOSisValid_r(geosContext, dstGeom) == 0) {
-                            if(bFixGeom) {
+                    if(bFixGeom) { // Hack to skip strict check via GEOSPreparedContains_r
+                        if(nullptr != dstGeom) {
+                            if(GEOSisValid_r(geosContext, dstGeom) == 0) {
                                 dstGeom = MakeValid(geosContext, dstGeom, static_cast<OGRwkbGeometryType>(eGType));
                                 wasInvalid = true;
                             }
-                            else {
-                                GEOSGeom_destroy_r(geosContext, dstGeom);
-                                goto end_loop;
+
+                            if(nullptr != dstGeom) {
+                                CPLMutexHolder holder(hMutex, 10.5);
+                                result = GEOSPreparedContains_r(geosContext,
+                                                                cutGeomPrepSrc,
+                                                                dstGeom);
                             }
                         }
-
-                        if(nullptr != dstGeom) {
-                            if(hMutex) {
-                                CPLAcquireMutex(hMutex, 0.5);
-                            }
-
-                            result = GEOSPreparedContains_r(geosContext, cutGeomPrepSrc, dstGeom);
-
-                            if(hMutex) {
-                                CPLReleaseMutex(hMutex);
-                            }
+                        else {
+                            CPLError( CE_Failure, CPLE_AppDefined,
+                                      "Failed to exportToGEOS feature " CPL_FRMT_GIB
+                                      " (geometry probably is invalid).",
+                                      poFeature->GetFID() );
                         }
-                    }
-                    else {
-                        CPLError( CE_Failure, CPLE_AppDefined, "Failed to exportToGEOS feature " CPL_FRMT_GIB " (geometry probably is invalid).",
-                                  poFeature->GetFID() );
                     }
 
                     if(result != 1 && nullptr != dstGeom) {
@@ -3900,14 +3902,19 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                         if (poClipped == NULL || poClipped->IsEmpty())
                         {
                             delete poClipped;
+                            psInfo->nFeaturesScipClip++;
                             goto end_loop;
                         }
                         poDstGeometry = poClipped;
+                        psInfo->nFeaturesClipped++;
                     }
                     else if(wasInvalid && nullptr != dstGeom) {
                         delete poDstGeometry;
                         poDstGeometry = OGRGeometryFactory::createFromGEOS(geosContext, dstGeom);
                         GEOSGeom_destroy_r(geosContext, dstGeom);
+                    }
+                    else {
+                        psInfo->nFeaturesInsideClip++;
                     }
                 }
             }
@@ -4062,6 +4069,14 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
             {
                 CPLError( CE_Warning, CPLE_AppDefined,
                           "Feature id not preserved");
+            }
+
+            // Report progress
+            if(nFeaturesWritten % 1000 == 0) {
+                CPLDebug("NextGIS Cutter", "Features read: " CPL_FRMT_GIB " / write: " CPL_FRMT_GIB "\nOut of clip bbox: " CPL_FRMT_GIB ", Inside clip bbox: " CPL_FRMT_GIB ", Clipped: " CPL_FRMT_GIB ", Scipped: " CPL_FRMT_GIB,
+                         psInfo->nFeaturesRead, nFeaturesWritten,
+                         psInfo->nFeaturesOutOfClip, psInfo->nFeaturesInsideClip,
+                         psInfo->nFeaturesClipped, psInfo->nFeaturesScipClip);
             }
         }
         else if( !psOptions->bSkipFailures )
