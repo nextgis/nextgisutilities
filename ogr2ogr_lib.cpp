@@ -4080,7 +4080,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                 long minutes = (nEstimate / 60) - (hours * 60);
                 long seconds = nEstimate - (hours * 3600 + minutes * 60);
                 CPLDebug("NextGIS Cutter", "Features read: " CPL_FRMT_GIB
-                         " / write: " CPL_FRMT_GIB " - %.2f %% [Estimate %ld:%ld:%ld]\nOut of clip bbox: " CPL_FRMT_GIB
+                         " / write: " CPL_FRMT_GIB " - %.2f %% [Estimate %02ld:%02ld:%02ld]\nOut of clip bbox: " CPL_FRMT_GIB
                          ", Inside clip bbox: " CPL_FRMT_GIB ", Clipped: " CPL_FRMT_GIB ", Skipped: " CPL_FRMT_GIB,
                          psInfo->nFeaturesRead, nFeaturesWritten,
                          double(nTotalProcessed) / psInfo->nFeaturesRead * 100.0,
