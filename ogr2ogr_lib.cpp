@@ -3896,6 +3896,8 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                             poClipped = OGRGeometryFactory::createFromGEOS(geosContext, cutGeom);
                         }
 
+
+                        CPLMutexHolder holder(hMutex, 10.5);
                         GEOSGeom_destroy_r(geosContext, dstGeom);
                         GEOSGeom_destroy_r(geosContext, cutGeom);
 
@@ -4076,7 +4078,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                 long nEstimate = (nLeave * nDiff) / nTotalProcessed;
                 long hours = nEstimate / 3600;
                 long minutes = (nEstimate / 60) - (hours * 60);
-                long seconds = nEstimate - (hours * 60 + minutes * 60);
+                long seconds = nEstimate - (hours * 3600 + minutes * 60);
                 CPLDebug("NextGIS Cutter", "Features read: " CPL_FRMT_GIB
                          " / write: " CPL_FRMT_GIB " - %.2f %% [Estimate %ld:%ld:%ld]\nOut of clip bbox: " CPL_FRMT_GIB
                          ", Inside clip bbox: " CPL_FRMT_GIB ", Clipped: " CPL_FRMT_GIB ", Skipped: " CPL_FRMT_GIB,
