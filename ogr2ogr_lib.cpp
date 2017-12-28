@@ -3460,6 +3460,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
     psInfo->nFeaturesInsideClip = 0;
     psInfo->nFeaturesOutOfClip = 0;
     psInfo->nFeaturesSkipClip = 0;
+    psInfo->startTime = time(nullptr);
 
     return psInfo;
 }
@@ -4069,11 +4070,19 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
 
             // Report progress
             if(nFeaturesWritten % 10000 == 0) {
+                long nDiff = time(nullptr) - psInfo->startTime;
+                GIntBig nTotalProcessed = nFeaturesWritten + psInfo->nFeaturesOutOfClip + psInfo->nFeaturesSkipClip;
+                GIntBig nLeave = psInfo->nFeaturesRead - nTotalProcessed;
+                long nEstimate = (nLeave * nDiff) / nTotalProcessed;
+                long hours = nEstimate / 3600;
+                long minutes = (nEstimate / 60) - (hours * 60);
+                long seconds = nEstimate - (hours * 60 + minutes * 60);
                 CPLDebug("NextGIS Cutter", "Features read: " CPL_FRMT_GIB
-                         " / write: " CPL_FRMT_GIB " - %f.2 %%\nOut of clip bbox: " CPL_FRMT_GIB
+                         " / write: " CPL_FRMT_GIB " - %f.2 %% [Estimate %ld:%ld:%ld]\nOut of clip bbox: " CPL_FRMT_GIB
                          ", Inside clip bbox: " CPL_FRMT_GIB ", Clipped: " CPL_FRMT_GIB ", Skipped: " CPL_FRMT_GIB,
                          psInfo->nFeaturesRead, nFeaturesWritten,
-                         double(nFeaturesWritten + psInfo->nFeaturesOutOfClip + psInfo->nFeaturesSkipClip) / psInfo->nFeaturesRead * 100.0,
+                         double(nTotalProcessed) / psInfo->nFeaturesRead * 100.0,
+                         hours, minutes, seconds,
                          psInfo->nFeaturesOutOfClip, psInfo->nFeaturesInsideClip,
                          psInfo->nFeaturesClipped, psInfo->nFeaturesSkipClip);
             }
