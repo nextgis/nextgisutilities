@@ -3867,27 +3867,36 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                     char result = 0;
                     GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
                     bool wasInvalid = false;
-                    if(bFixGeom) { // Hack to skip strict check via GEOSPreparedContains_r
-                        if(nullptr != dstGeom) {
-                            if(GEOSisValid_r(geosContext, dstGeom) == 0) {
-                                dstGeom = MakeValid(geosContext, dstGeom, static_cast<OGRwkbGeometryType>(eGType));
+
+                    if(nullptr != dstGeom) {
+                        if(GEOSisValid_r(geosContext, dstGeom) == 0) {
+                            if(bFixGeom) {
+                                dstGeom = MakeValid(geosContext, dstGeom,
+                                                    static_cast<OGRwkbGeometryType>(eGType));
                                 wasInvalid = true;
                             }
-
-                            if(nullptr != dstGeom) {
-                                CPLMutexHolder holder(hMutex, 10.5);
-                                result = GEOSPreparedContains_r(geosContext,
-                                                                cutGeomPrepSrc,
-                                                                dstGeom);
+                            else {
+                                delete poDstGeometry;
+                                GEOSGeom_destroy_r(geosContext, dstGeom);
+                                psInfo->nFeaturesSkipClip++;
+                                goto end_loop;
                             }
                         }
-                        else {
-                            CPLError( CE_Failure, CPLE_AppDefined,
-                                      "Failed to exportToGEOS feature " CPL_FRMT_GIB
-                                      " (geometry probably is invalid).",
-                                      poFeature->GetFID() );
+
+                        if(nullptr != dstGeom) {
+                            CPLMutexHolder holder(hMutex, 10.5);
+                            result = GEOSPreparedContains_r(geosContext,
+                                                            cutGeomPrepSrc,
+                                                            dstGeom);
                         }
                     }
+                    else {
+                        CPLError( CE_Failure, CPLE_AppDefined,
+                                  "Failed to exportToGEOS feature " CPL_FRMT_GIB
+                                  " (geometry probably is invalid).",
+                                  poFeature->GetFID() );
+                    }
+
 
                     if(result != 1 && nullptr != dstGeom) {
                         // Checked intersection
@@ -3904,8 +3913,6 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                                                                            cutGeom);
                             }
 
-
-                            CPLMutexHolder holder(hMutex, 10.5);
                             GEOSGeom_destroy_r(geosContext, dstGeom);
                             GEOSGeom_destroy_r(geosContext, cutGeom);
 
@@ -3998,47 +4005,67 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                     char result = 0;
                     bool wasInvalid = false;
                     GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
-                    if(bFixGeom) {
-                        if(nullptr != dstGeom) {
-                            if(GEOSisValid_r(geosContext, dstGeom) == 0) {
+
+                    if(nullptr != dstGeom) {
+                        if(GEOSisValid_r(geosContext, dstGeom) == 0) {
+                            if(bFixGeom) {
                                 dstGeom = MakeValid(geosContext, dstGeom, static_cast<OGRwkbGeometryType>(eGType));
                                 wasInvalid = true;
-
                             }
-
-                            if(nullptr != dstGeom) {
-                                if(hMutex) {
-                                    CPLAcquireMutex(hMutex, 0.7);
-                                }
-                                result = GEOSPreparedContains_r(geosContext, cutGeomPrepDst, dstGeom);
-                                if(hMutex) {
-                                    CPLReleaseMutex(hMutex);
-                                }
+                            else {
+                                delete poDstGeometry;
+                                GEOSGeom_destroy_r(geosContext, dstGeom);
+                                psInfo->nFeaturesSkipClip++;
+                                goto end_loop;
                             }
                         }
-                        else {
-                            CPLError( CE_Failure, CPLE_AppDefined, "Failed to exportToGEOS feature " CPL_FRMT_GIB " (geometry probably is invalid).",
-                                      poFeature->GetFID() );
+
+                        if(nullptr != dstGeom) {
+                            if(hMutex) {
+                                CPLAcquireMutex(hMutex, 0.7);
+                            }
+                            result = GEOSPreparedContains_r(geosContext, cutGeomPrepDst, dstGeom);
+                            if(hMutex) {
+                                CPLReleaseMutex(hMutex);
+                            }
                         }
                     }
+                    else {
+                        CPLError( CE_Failure, CPLE_AppDefined, "Failed to exportToGEOS feature " CPL_FRMT_GIB " (geometry probably is invalid).",
+                                  poFeature->GetFID() );
+                    }
+
 
                     if(result != 1 && nullptr != dstGeom) {
-                        GEOSGeom cutGeom = GEOSIntersection_r(geosContext, cutGeomDst, dstGeom);
-                        OGRGeometry* poClipped = nullptr;
-                        if(nullptr != cutGeom) {
-                            poClipped = OGRGeometryFactory::createFromGEOS(geosContext, cutGeom);
-                        }
+                        CPLMutexHolder holder(hMutex, 10.5);
+                        if(GEOSPreparedIntersects_r(geosContext, cutGeomPrepDst,
+                                                    dstGeom) == 1) {
+                            GEOSGeom cutGeom = GEOSIntersection_r(geosContext,
+                                                                  cutGeomDst, dstGeom);
+                            OGRGeometry* poClipped = nullptr;
+                            if(nullptr != cutGeom) {
+                                poClipped =
+                                        OGRGeometryFactory::createFromGEOS(geosContext,
+                                                                           cutGeom);
+                            }
 
-                        GEOSGeom_destroy_r(geosContext, dstGeom);
-                        GEOSGeom_destroy_r(geosContext, cutGeom);
-                        delete poDstGeometry;
-                        if (poClipped == NULL || poClipped->IsEmpty())
-                        {
-                            delete poClipped;
+                            GEOSGeom_destroy_r(geosContext, dstGeom);
+                            GEOSGeom_destroy_r(geosContext, cutGeom);
+                            delete poDstGeometry;
+                            if (poClipped == NULL || poClipped->IsEmpty())
+                            {
+                                delete poClipped;
+                                goto end_loop;
+                            }
+
+                            poDstGeometry = poClipped;
+                        }
+                        else {
+                            delete poDstGeometry;
+                            GEOSGeom_destroy_r(geosContext, dstGeom);
+                            psInfo->nFeaturesOutOfClip++;
                             goto end_loop;
                         }
-
-                        poDstGeometry = poClipped;
                     }
                     else if(wasInvalid && nullptr != dstGeom) {
                         delete poDstGeometry;
