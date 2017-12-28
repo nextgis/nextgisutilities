@@ -3459,7 +3459,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
     psInfo->nFeaturesClipped = 0;
     psInfo->nFeaturesInsideClip = 0;
     psInfo->nFeaturesOutOfClip = 0;
-    psInfo->nFeaturesScipClip = 0;
+    psInfo->nFeaturesSkipClip = 0;
 
     return psInfo;
 }
@@ -3902,7 +3902,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                         if (poClipped == NULL || poClipped->IsEmpty())
                         {
                             delete poClipped;
-                            psInfo->nFeaturesScipClip++;
+                            psInfo->nFeaturesSkipClip++;
                             goto end_loop;
                         }
                         poDstGeometry = poClipped;
@@ -4069,10 +4069,10 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
 
             // Report progress
             if(nFeaturesWritten % 10000 == 0) {
-                CPLDebug("NextGIS Cutter", "Features read: " CPL_FRMT_GIB " / write: " CPL_FRMT_GIB " - %f %%\nOut of clip bbox: " CPL_FRMT_GIB ", Inside clip bbox: " CPL_FRMT_GIB ", Clipped: " CPL_FRMT_GIB ", Scipped: " CPL_FRMT_GIB,
-                         psInfo->nFeaturesRead, nFeaturesWritten, double(nFeaturesWritten) / psInfo->nFeaturesRead * 100.0,
+                CPLDebug("NextGIS Cutter", "Features read: " CPL_FRMT_GIB " / write: " CPL_FRMT_GIB " - %f %%\nOut of clip bbox: " CPL_FRMT_GIB ", Inside clip bbox: " CPL_FRMT_GIB ", Clipped: " CPL_FRMT_GIB ", Skipped: " CPL_FRMT_GIB,
+                         psInfo->nFeaturesRead, nFeaturesWritten, double(nFeaturesWritten + psInfo->nFeaturesOutOfClip + psInfo->nFeaturesSkipClip) / psInfo->nFeaturesRead * 100.0,
                          psInfo->nFeaturesOutOfClip, psInfo->nFeaturesInsideClip,
-                         psInfo->nFeaturesClipped, psInfo->nFeaturesScipClip);
+                         psInfo->nFeaturesClipped, psInfo->nFeaturesSkipClip);
             }
         }
         else if( !psOptions->bSkipFailures )
