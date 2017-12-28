@@ -3890,26 +3890,41 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                     }
 
                     if(result != 1 && nullptr != dstGeom) {
-                        GEOSGeom cutGeom = GEOSIntersection_r(geosContext, cutGeomSrc, dstGeom);
-                        OGRGeometry* poClipped = nullptr;
-                        if(nullptr != cutGeom) {
-                            poClipped = OGRGeometryFactory::createFromGEOS(geosContext, cutGeom);
-                        }
-
-
+                        // Checked intersection
                         CPLMutexHolder holder(hMutex, 10.5);
-                        GEOSGeom_destroy_r(geosContext, dstGeom);
-                        GEOSGeom_destroy_r(geosContext, cutGeom);
+                        if(GEOSPreparedIntersects_r(geosContext, cutGeomPrepSrc,
+                                                    dstGeom) == 1) {
+                            GEOSGeom cutGeom = GEOSIntersection_r(geosContext,
+                                                                  cutGeomSrc,
+                                                                  dstGeom);
+                            OGRGeometry* poClipped = nullptr;
+                            if(nullptr != cutGeom) {
+                                poClipped =
+                                        OGRGeometryFactory::createFromGEOS(geosContext,
+                                                                           cutGeom);
+                            }
 
-                        delete poDstGeometry;
-                        if (poClipped == NULL || poClipped->IsEmpty())
-                        {
-                            delete poClipped;
-                            psInfo->nFeaturesSkipClip++;
+
+                            CPLMutexHolder holder(hMutex, 10.5);
+                            GEOSGeom_destroy_r(geosContext, dstGeom);
+                            GEOSGeom_destroy_r(geosContext, cutGeom);
+
+                            delete poDstGeometry;
+                            if (poClipped == NULL || poClipped->IsEmpty())
+                            {
+                                delete poClipped;
+                                psInfo->nFeaturesSkipClip++;
+                                goto end_loop;
+                            }
+                            poDstGeometry = poClipped;
+                            psInfo->nFeaturesClipped++;
+                        }
+                        else {
+                            delete poDstGeometry;
+                            GEOSGeom_destroy_r(geosContext, dstGeom);
+                            psInfo->nFeaturesOutOfClip++;
                             goto end_loop;
                         }
-                        poDstGeometry = poClipped;
-                        psInfo->nFeaturesClipped++;
                     }
                     else if(wasInvalid && nullptr != dstGeom) {
                         delete poDstGeometry;
@@ -4071,7 +4086,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
             }
 
             // Report progress
-            if(nFeaturesWritten % 10000 == 0) {
+            if(nFeaturesWritten % 100 == 0) {
                 long nDiff = time(nullptr) - psInfo->startTime;
                 GIntBig nTotalProcessed = nFeaturesWritten + psInfo->nFeaturesOutOfClip + psInfo->nFeaturesSkipClip;
                 GIntBig nLeave = psInfo->nFeaturesRead - nTotalProcessed;
