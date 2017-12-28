@@ -4113,7 +4113,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
             }
 
             // Report progress
-            if(nFeaturesWritten % 100 == 0) {
+            if(nFeaturesWritten % 10000 == 0) {
                 long nDiff = time(nullptr) - psInfo->startTime;
                 GIntBig nTotalProcessed = nFeaturesWritten + psInfo->nFeaturesOutOfClip + psInfo->nFeaturesSkipClip;
                 GIntBig nLeave = psInfo->nFeaturesRead - nTotalProcessed;
