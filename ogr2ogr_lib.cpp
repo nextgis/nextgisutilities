@@ -3844,8 +3844,8 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                         }
                         else {
                             delete poDstGeometry;
-                            GEOSGeom_destroy_r(geosContext, dstGeom);
                             psInfo->nFeaturesSkipClip++;
+                            GEOSGeom_destroy_r(geosContext, dstGeom);
                             goto end_loop;
                         }
                     }
@@ -3864,7 +3864,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                               " (geometry probably is invalid).",
                               poFeature->GetFID() );
 
-                    psInfo->nFeaturesSkipClip++;
+                    psInfo->nFeaturesInsideClip++;
                 }
 
                 if(nullptr != dstGeom) {
@@ -3906,6 +3906,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                     else if(wasInvalid && nullptr != dstGeom) {
                         delete poDstGeometry;
                         poDstGeometry = OGRGeometryFactory::createFromGEOS(geosContext, dstGeom);
+                        psInfo->nFeaturesInsideClip++;
                     }
                     else {
                         psInfo->nFeaturesInsideClip++;
