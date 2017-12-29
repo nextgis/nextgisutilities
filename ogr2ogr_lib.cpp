@@ -3870,9 +3870,14 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                 if(nullptr != dstGeom) {
                     if(result != 1) {
                         // Check intersection
-                        CPLMutexHolder holder(hMutex, 300);
-                        if(GEOSPreparedIntersects_r(geosContext, cutGeomPrepSrc,
-                                                    dstGeom) == 1) {
+                        {
+                            CPLMutexHolder holder(hMutex, 10.5);
+                            result = GEOSPreparedIntersects_r(geosContext,
+                                                              cutGeomPrepSrc,
+                                                              dstGeom);
+                        }
+
+                        if(result == 1) {
                             GEOSGeom cutGeom = GEOSIntersection_r(geosContext,
                                                                   cutGeomSrc,
                                                                   dstGeom);
@@ -3883,6 +3888,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                                                                            cutGeom);
                             }
 
+                            CPLMutexHolder holder(hMutex, 10.5);
                             GEOSGeom_destroy_r(geosContext, cutGeom);
 
                             delete poDstGeometry;
@@ -3899,6 +3905,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                         else {
                             delete poDstGeometry;
                             psInfo->nFeaturesOutOfClip++;
+                            CPLMutexHolder holder(hMutex, 10.5);
                             GEOSGeom_destroy_r(geosContext, dstGeom);
                             goto end_loop;
                         }
@@ -3911,6 +3918,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                     else {
                         psInfo->nFeaturesInsideClip++;
                     }
+                    CPLMutexHolder holder(hMutex, 10.5);
                     GEOSGeom_destroy_r(geosContext, dstGeom);
                 }
             }
@@ -3996,9 +4004,13 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
 
                 if(nullptr != dstGeom) {
                     if(result != 1) {
-                        CPLMutexHolder holder(hMutex, 350.5);
-                        if(GEOSPreparedIntersects_r(geosContext, cutGeomPrepDst,
-                                                    dstGeom) == 1) {
+                        {
+                            CPLMutexHolder holder(hMutex, 10.5);
+                            result = GEOSPreparedIntersects_r(geosContext,
+                                                              cutGeomPrepDst,
+                                                              dstGeom);
+                        }
+                        if(result == 1) {
                             GEOSGeom cutGeom = GEOSIntersection_r(geosContext,
                                                                   cutGeomDst, dstGeom);
                             OGRGeometry* poClipped = nullptr;
@@ -4008,6 +4020,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                                                                            cutGeom);
                             }
 
+                            CPLMutexHolder holder(hMutex, 10.5);
                             GEOSGeom_destroy_r(geosContext, cutGeom);
                             delete poDstGeometry;
                             if (poClipped == NULL || poClipped->IsEmpty())
@@ -4022,6 +4035,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                         else {
                             delete poDstGeometry;
                             psInfo->nFeaturesOutOfClip++;
+                            CPLMutexHolder holder(hMutex, 10.5);
                             GEOSGeom_destroy_r(geosContext, dstGeom);
                             goto end_loop;
                         }
@@ -4030,6 +4044,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                         delete poDstGeometry;
                         poDstGeometry = OGRGeometryFactory::createFromGEOS(geosContext, dstGeom);
                     }
+                    CPLMutexHolder holder(hMutex, 10.5);
                     GEOSGeom_destroy_r(geosContext, dstGeom);
                 }
             }
