@@ -69,38 +69,38 @@ OGRGeometry* LoadGeometry( const char* pszDS,
                                   const char* pszLyr,
                                   const char* pszWhere)
 {
-    GDALDataset *poDS = (GDALDataset*) OGROpen( pszDS, FALSE, NULL );
-    if (poDS == NULL)
-        return NULL;
+    GDALDataset *poDS = (GDALDataset*) OGROpen( pszDS, FALSE, nullptr );
+    if (poDS == nullptr)
+        return nullptr;
 
     OGRLayer *poLyr;
-    if (pszSQL != NULL)
-        poLyr = poDS->ExecuteSQL( pszSQL, NULL, NULL );
-    else if (pszLyr != NULL)
+    if (pszSQL != nullptr)
+        poLyr = poDS->ExecuteSQL( pszSQL, nullptr, nullptr );
+    else if (pszLyr != nullptr)
         poLyr = poDS->GetLayerByName(pszLyr);
     else
         poLyr = poDS->GetLayer(0);
 
-    if (poLyr == NULL)
+    if (poLyr == nullptr)
     {
         CPLError( CE_Failure, CPLE_AppDefined, "Failed to identify source layer from datasource." );
         GDALClose(( GDALDatasetH) poDS);
-        return NULL;
+        return nullptr;
     }
 
     if (pszWhere)
         poLyr->SetAttributeFilter(pszWhere);
 
-    OGRGeometry *poGeom = NULL;
+    OGRGeometry *poGeom = nullptr;
     OGRFeature *poFeat;
-    while ((poFeat = poLyr->GetNextFeature()) != NULL)
+    while ((poFeat = poLyr->GetNextFeature()) != nullptr)
     {
         OGRGeometry* poSrcGeom = poFeat->GetGeometryRef();
         if (poSrcGeom)
         {
             OGRwkbGeometryType eType = wkbFlatten( poSrcGeom->getGeometryType() );
 
-            if (poGeom == NULL)
+            if (poGeom == nullptr)
                 poGeom = OGRGeometryFactory::createGeometry( wkbMultiPolygon );
 
             if( eType == wkbPolygon )
@@ -121,17 +121,17 @@ OGRGeometry* LoadGeometry( const char* pszDS,
                 CPLError( CE_Failure, CPLE_AppDefined, "Geometry not of polygon type." );
                 OGRGeometryFactory::destroyGeometry(poGeom);
                 OGRFeature::DestroyFeature(poFeat);
-                if( pszSQL != NULL )
+                if( pszSQL != nullptr )
                     poDS->ReleaseResultSet( poLyr );
                 GDALClose(( GDALDatasetH) poDS);
-                return NULL;
+                return nullptr;
             }
         }
 
         OGRFeature::DestroyFeature(poFeat);
     }
 
-    if( pszSQL != NULL )
+    if( pszSQL != nullptr )
         poDS->ReleaseResultSet( poLyr );
     GDALClose(( GDALDatasetH) poDS);
 
@@ -150,8 +150,8 @@ OGRSplitListFieldLayer::OGRSplitListFieldLayer(OGRLayer* poSrcLayerIn,
     nMaxSplitListSubFields = nMaxSplitListSubFieldsIn;
     if (nMaxSplitListSubFields < 0)
         nMaxSplitListSubFields = INT_MAX;
-    poFeatureDefn = NULL;
-    pasListFields = NULL;
+    poFeatureDefn = nullptr;
+    pasListFields = nullptr;
     nListFieldCount = 0;
 }
 
@@ -174,7 +174,7 @@ OGRSplitListFieldLayer::~OGRSplitListFieldLayer()
 bool OGRSplitListFieldLayer::BuildLayerDefn(GDALProgressFunc pfnProgress,
                                             void *pProgressArg)
 {
-    CPLAssert(poFeatureDefn == NULL);
+    CPLAssert(poFeatureDefn == nullptr);
 
     OGRFeatureDefn* poSrcFieldDefn = poSrcLayer->GetLayerDefn();
 
@@ -217,7 +217,7 @@ bool OGRSplitListFieldLayer::BuildLayerDefn(GDALProgressFunc pfnProgress,
 
         /* Scan the whole layer to compute the maximum number of */
         /* items for each field of list type */
-        while( (poSrcFeature = poSrcLayer->GetNextFeature()) != NULL )
+        while( (poSrcFeature = poSrcLayer->GetNextFeature()) != nullptr )
         {
             for( int i=0; i<nListFieldCount; ++i )
             {
@@ -260,7 +260,7 @@ bool OGRSplitListFieldLayer::BuildLayerDefn(GDALProgressFunc pfnProgress,
             OGRFeature::DestroyFeature(poSrcFeature);
 
             nFeatureIndex ++;
-            if (pfnProgress != NULL && nFeatureCount != 0)
+            if (pfnProgress != nullptr && nFeatureCount != 0)
                 pfnProgress(nFeatureIndex * 1.0 / nFeatureCount, "", pProgressArg);
         }
     }
@@ -331,9 +331,9 @@ bool OGRSplitListFieldLayer::BuildLayerDefn(GDALProgressFunc pfnProgress,
 
 OGRFeature *OGRSplitListFieldLayer::TranslateFeature(OGRFeature* poSrcFeature)
 {
-    if (poSrcFeature == NULL)
-        return NULL;
-    if (poFeatureDefn == NULL)
+    if (poSrcFeature == nullptr)
+        return nullptr;
+    if (poFeatureDefn == nullptr)
         return poSrcFeature;
 
     OGRFeature* poFeature = OGRFeature::CreateFeature(poFeatureDefn);
@@ -439,7 +439,7 @@ OGRFeature *OGRSplitListFieldLayer::GetFeature(GIntBig nFID)
 
 OGRFeatureDefn* OGRSplitListFieldLayer::GetLayerDefn()
 {
-    if (poFeatureDefn == NULL)
+    if (poFeatureDefn == nullptr)
         return poSrcLayer->GetLayerDefn();
     return poFeatureDefn;
 }
@@ -470,17 +470,17 @@ public:
     virtual OGRSpatialReference *GetSourceCS() override
     {
         return poCT1 ? poCT1->GetSourceCS() :
-               poCT2 ? poCT2->GetSourceCS() : NULL;
+               poCT2 ? poCT2->GetSourceCS() : nullptr;
     }
 
     virtual OGRSpatialReference *GetTargetCS() override
     {
         return poCT2 ? poCT2->GetTargetCS() :
-               poCT1 ? poCT1->GetTargetCS() : NULL;
+               poCT1 ? poCT1->GetTargetCS() : nullptr;
     }
 
     virtual int Transform( int nCount,
-                           double *x, double *y, double *z = NULL ) override
+                           double *x, double *y, double *z = nullptr ) override
     {
         int nResult = TRUE;
         if( poCT1 )
@@ -491,8 +491,8 @@ public:
     }
 
     virtual int TransformEx( int nCount,
-                             double *x, double *y, double *z = NULL,
-                             int *pabSuccess = NULL ) override
+                             double *x, double *y, double *z = nullptr,
+                             int *pabSuccess = nullptr ) override
     {
         int nResult = TRUE;
         if( poCT1 )
@@ -512,9 +512,9 @@ void ApplySpatialFilter(OGRLayer* poLayer, OGRGeometry* poSpatialFilter,
                         const char* pszGeomField,
                         OGRSpatialReference* poSourceSRS)
 {
-    if( poSpatialFilter != NULL )
+    if( poSpatialFilter != nullptr )
     {
-        OGRGeometry* poSpatialFilterReprojected = NULL;
+        OGRGeometry* poSpatialFilterReprojected = nullptr;
         if( poSpatSRS )
         {
             poSpatialFilterReprojected = poSpatialFilter->clone();
@@ -526,7 +526,7 @@ void ApplySpatialFilter(OGRLayer* poLayer, OGRGeometry* poSpatialFilter,
                 CPLError(CE_Warning, CPLE_AppDefined, "cannot determine layer SRS for %s.", poLayer->GetDescription());
         }
 
-        if( pszGeomField != NULL )
+        if( pszGeomField != nullptr )
         {
             int iGeomField = poLayer->GetLayerDefn()->GetGeomFieldIndex(pszGeomField);
             if( iGeomField >= 0 )
@@ -561,7 +561,7 @@ static int GetFieldType(const char* pszArg, int* pnSubFieldType)
          if( EQUALN(pszArg,pszFieldTypeName,nLengthBeforeParenthesis) &&
              pszFieldTypeName[nLengthBeforeParenthesis] == '\0' )
          {
-             if( pszOpenParenthesis != NULL )
+             if( pszOpenParenthesis != nullptr )
              {
                  *pnSubFieldType = -1;
                  CPLString osArgSubType = pszOpenParenthesis + 1;
@@ -645,9 +645,9 @@ GDALVectorTranslateOptions* GDALVectorTranslateOptionsClone(const GDALVectorTran
     psOptions->papszMetadataOptions = CSLDuplicate(psOptionsIn->papszMetadataOptions);
     if( psOptionsIn->nGCPCount )
         psOptions->pasGCPs = GDALDuplicateGCPs( psOptionsIn->nGCPCount, psOptionsIn->pasGCPs );
-    psOptions->hClipSrc = ( psOptionsIn->hClipSrc != NULL ) ? OGR_G_Clone(psOptionsIn->hClipSrc) : NULL;
-    psOptions->hClipDst = ( psOptionsIn->hClipDst != NULL ) ? OGR_G_Clone(psOptionsIn->hClipDst) : NULL;
-    psOptions->hSpatialFilter = ( psOptionsIn->hSpatialFilter != NULL ) ? OGR_G_Clone(psOptionsIn->hSpatialFilter) : NULL;
+    psOptions->hClipSrc = ( psOptionsIn->hClipSrc != nullptr ) ? OGR_G_Clone(psOptionsIn->hClipSrc) : nullptr;
+    psOptions->hClipDst = ( psOptionsIn->hClipDst != nullptr ) ? OGR_G_Clone(psOptionsIn->hClipDst) : nullptr;
+    psOptions->hSpatialFilter = ( psOptionsIn->hSpatialFilter != nullptr ) ? OGR_G_Clone(psOptionsIn->hSpatialFilter) : nullptr;
 
     return psOptions;
 }
@@ -711,8 +711,8 @@ GDALVectorTranslateWrappedLayer::GDALVectorTranslateWrappedLayer(
                     OGRLayer* poBaseLayer, bool bOwnBaseLayer) :
         OGRLayerDecorator(poBaseLayer, bOwnBaseLayer),
         m_apoCT( poBaseLayer->GetLayerDefn()->GetGeomFieldCount(),
-                 static_cast<OGRCoordinateTransformation*>(NULL) ),
-        m_poFDefn( NULL )
+                 static_cast<OGRCoordinateTransformation*>(nullptr) ),
+        m_poFDefn( nullptr )
 {
 }
 
@@ -735,7 +735,7 @@ GDALVectorTranslateWrappedLayer* GDALVectorTranslateWrappedLayer::New(
                 OGRSpatialReference* poSourceSRS =
                     poBaseLayer->GetLayerDefn()->
                                         GetGeomFieldDefn(i)->GetSpatialRef();
-                if( poSourceSRS == NULL )
+                if( poSourceSRS == nullptr )
                 {
                     CPLError(CE_Failure, CPLE_AppDefined,
                              "Layer %s has no source SRS for geometry field %s",
@@ -743,16 +743,16 @@ GDALVectorTranslateWrappedLayer* GDALVectorTranslateWrappedLayer::New(
                              poBaseLayer->GetLayerDefn()->
                                         GetGeomFieldDefn(i)->GetNameRef());
                     delete poNew;
-                    return NULL;
+                    return nullptr;
                 }
                 else
                 {
                     poNew->m_apoCT[i] = OGRCreateCoordinateTransformation(
                                                                    poSourceSRS,
                                                                    poOutputSRS);
-                    if( poNew->m_apoCT[i] == NULL )
+                    if( poNew->m_apoCT[i] == nullptr )
                     {
-                        char        *pszWKT = NULL;
+                        char        *pszWKT = nullptr;
 
                         CPLError( CE_Failure, CPLE_AppDefined,
                             "Failed to create coordinate transformation between the\n"
@@ -771,7 +771,7 @@ GDALVectorTranslateWrappedLayer* GDALVectorTranslateWrappedLayer::New(
                         CPLFree(pszWKT);
 
                         delete poNew;
-                        return NULL;
+                        return nullptr;
                     }
                 }
             }
@@ -802,8 +802,8 @@ OGRFeature* GDALVectorTranslateWrappedLayer::GetFeature(GIntBig nFID)
 OGRFeature* GDALVectorTranslateWrappedLayer::TranslateFeature(
                                                     OGRFeature* poSrcFeat )
 {
-    if( poSrcFeat == NULL )
-        return NULL;
+    if( poSrcFeat == nullptr )
+        return nullptr;
     OGRFeature* poNewFeat = new OGRFeature(m_poFDefn);
     poNewFeat->SetFrom(poSrcFeat);
     poNewFeat->SetFID(poSrcFeat->GetFID());
@@ -853,10 +853,10 @@ GDALVectorTranslateWrappedDataset* GDALVectorTranslateWrappedDataset::New(
     {
         OGRLayer* poLayer = GDALVectorTranslateWrappedLayer::New(
                             poBase->GetLayer(i), false, poOutputSRS, bTransform);
-        if(poLayer == NULL )
+        if(poLayer == nullptr )
         {
             delete poNew;
-            return NULL;
+            return nullptr;
         }
         poNew->m_apoLayers.push_back(poLayer);
     }
@@ -879,7 +879,7 @@ GDALVectorTranslateWrappedDataset::~GDALVectorTranslateWrappedDataset()
 OGRLayer* GDALVectorTranslateWrappedDataset::GetLayer(int i)
 {
     if( i < 0 || i >= static_cast<int>(m_apoLayers.size()) )
-        return NULL;
+        return nullptr;
     return m_apoLayers[i];
 }
 
@@ -907,12 +907,12 @@ OGRLayer* GDALVectorTranslateWrappedDataset::GetLayerByName(const char* pszName)
     }
 
     OGRLayer* poLayer = m_poBase->GetLayerByName(pszName);
-    if( poLayer == NULL )
-        return NULL;
+    if( poLayer == nullptr )
+        return nullptr;
     poLayer = GDALVectorTranslateWrappedLayer::New(
                                 poLayer, false, m_poOutputSRS, m_bTransform);
-    if( poLayer == NULL )
-        return NULL;
+    if( poLayer == nullptr )
+        return nullptr;
 
     // Replicate source dataset behaviour: if the fact of calling
     // GetLayerByName() on a initially hidden layer makes it visible through
@@ -938,8 +938,8 @@ OGRLayer *  GDALVectorTranslateWrappedDataset::ExecuteSQL(
 {
     OGRLayer* poLayer = m_poBase->ExecuteSQL(pszStatement,
                                                 poSpatialFilter, pszDialect);
-    if( poLayer == NULL )
-        return NULL;
+    if( poLayer == nullptr )
+        return nullptr;
     return GDALVectorTranslateWrappedLayer::New(
                                 poLayer, true, m_poOutputSRS, m_bTransform);
 }
@@ -956,7 +956,7 @@ void GDALVectorTranslateWrappedDataset:: ReleaseResultSet(
 
 void FreeTargetLayerInfo(TargetLayerInfo* psInfo)
 {
-    if( psInfo == NULL )
+    if( psInfo == nullptr )
         return;
     for(int i=0;i<psInfo->poDstLayer->GetLayerDefn()->GetGeomFieldCount();i++)
     {
@@ -986,188 +986,188 @@ GDALDataset* GDALVectorTranslateCreateCopy(
     if( psOptions->bSkipFailures )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-skipfailures");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->nLayerTransaction >= 0 )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-lyr_transaction or -ds_transaction");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->nFIDToFetch >= 0 )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-fid");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->papszLCO )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-lco");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->bAddMissingFields )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-addfields");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->pszSourceSRSDef )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-s_srs");
-        return NULL;
+        return nullptr;
     }
     if( !psOptions->bExactFieldNameMatch )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-relaxedFieldNameMatch");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->pszNewLayerName )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-nln");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->papszSelFields )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-select");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->pszSQLStatement )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-sql");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->pszDialect )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-dialect");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->eGType != GEOMTYPE_UNCHANGED ||
         psOptions->eGeomTypeConversion != GTC_DEFAULT )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-nlt");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->papszFieldTypesToString )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-fieldTypeToString");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->papszMapFieldType )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-mapFieldType");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->bUnsetFieldWidth )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-unsetFieldWidth");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->bWrapDateline )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-wrapdateline");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->bClipSrc )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-clipsrc");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->pszClipSrcSQL )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-clipsrcsql");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->pszClipSrcLayer )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-clipsrclayer");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->pszClipSrcWhere )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-clipsrcwhere");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->pszClipDstDS || psOptions->hClipDst )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-clipdst");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->pszClipDstSQL )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-clipdstsql");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->pszClipDstLayer )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-clipdstlayer");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->pszClipDstWhere )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-clipdstwhere");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->bSplitListFields )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-splitlistfields");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->nMaxSplitListSubFields >= 0 )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-maxsubfields");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->bExplodeCollections )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-explodecollections");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->pszZField )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-zfield");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->nGCPCount )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-gcp");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->papszFieldMap )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-fieldmap");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->bForceNullable )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-forceNullable");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->bUnsetDefault )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-unsetDefault");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->bUnsetFid )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-unsetFid");
-        return NULL;
+        return nullptr;
     }
     if( !psOptions->bCopyMD )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-nomd");
-        return NULL;
+        return nullptr;
     }
     if( !psOptions->bNativeData )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-noNativeData");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->nLimit >= 0 )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-limit");
-        return NULL;
+        return nullptr;
     }
     if( psOptions->papszMetadataOptions )
     {
         CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-mo");
-        return NULL;
+        return nullptr;
     }
 
     if( psOptions->pszOutputSRSDef )
@@ -1179,12 +1179,12 @@ GDALDataset* GDALVectorTranslateCreateCopy(
             CPLError( CE_Failure, CPLE_AppDefined,
                       "Failed to process SRS definition: %s",
                       psOptions->pszOutputSRSDef );
-            return NULL;
+            return nullptr;
         }
         poWrkSrcDS = GDALVectorTranslateWrappedDataset::New(
             poDS, oOutputSRSHolder.get(), psOptions->bTransform);
-        if( poWrkSrcDS == NULL )
-            return NULL;
+        if( poWrkSrcDS == nullptr )
+            return nullptr;
     }
 
     if( psOptions->pszWHERE )
@@ -1192,22 +1192,22 @@ GDALDataset* GDALVectorTranslateCreateCopy(
         // Hack for GMLAS driver
         if( EQUAL(poDriver->GetDescription(), "GMLAS") )
         {
-            if( psOptions->papszLayers == NULL )
+            if( psOptions->papszLayers == nullptr )
             {
                 CPLError(CE_Failure, CPLE_NotSupported,
                          "-where not supported by this output driver "
                          "without explicit layer name(s)");
                 if( poWrkSrcDS != poDS )
                     delete poWrkSrcDS;
-                return NULL;
+                return nullptr;
             }
             else
             {
                 char** papszIter = psOptions->papszLayers;
-                for( ; *papszIter != NULL; ++papszIter )
+                for( ; *papszIter != nullptr; ++papszIter )
                 {
                     OGRLayer* poSrcLayer = poDS->GetLayerByName(*papszIter);
-                    if( poSrcLayer != NULL )
+                    if( poSrcLayer != nullptr )
                     {
                         poSrcLayer->SetAttributeFilter( psOptions->pszWHERE );
                     }
@@ -1219,7 +1219,7 @@ GDALDataset* GDALVectorTranslateCreateCopy(
             CPLError(CE_Failure, CPLE_NotSupported, szErrorMsg, "-where");
             if( poWrkSrcDS != poDS )
                 delete poWrkSrcDS;
-            return NULL;
+            return nullptr;
         }
     }
 
@@ -1230,11 +1230,11 @@ GDALDataset* GDALVectorTranslateCreateCopy(
             OGRLayer* poSrcLayer = poWrkSrcDS->GetLayer(i);
             if( poSrcLayer &&
                 poSrcLayer->GetLayerDefn()->GetGeomFieldCount() > 0 &&
-                (psOptions->papszLayers == NULL ||
+                (psOptions->papszLayers == nullptr ||
                  CSLFindString(psOptions->papszLayers,
                                poSrcLayer->GetName())>=0) )
             {
-                if( psOptions->pszGeomField != NULL )
+                if( psOptions->pszGeomField != nullptr )
                 {
                     const int iGeomField = poSrcLayer->GetLayerDefn()->
                             GetGeomFieldIndex(psOptions->pszGeomField);
@@ -1267,7 +1267,7 @@ GDALDataset* GDALVectorTranslateCreateCopy(
         {
             CPLString osLayers;
             char** papszIter = psOptions->papszLayers;
-            for( ; *papszIter != NULL; ++papszIter )
+            for( ; *papszIter != nullptr; ++papszIter )
             {
                 if( !osLayers.empty() )
                     osLayers += ",";
@@ -1282,7 +1282,7 @@ GDALDataset* GDALVectorTranslateCreateCopy(
             CSLDestroy(papszDSCO);
             if( poWrkSrcDS != poDS )
                 delete poWrkSrcDS;
-            return NULL;
+            return nullptr;
         }
     }
 
@@ -1292,8 +1292,8 @@ GDALDataset* GDALVectorTranslateCreateCopy(
     // without parsing) and GetFileList()
     if( EQUAL(poDriver->GetDescription(), "GMLAS") )
     {
-        GDALDriverH hIdentifyingDriver = GDALIdentifyDriver(pszDest, NULL);
-        if( hIdentifyingDriver != NULL &&
+        GDALDriverH hIdentifyingDriver = GDALIdentifyDriver(pszDest, nullptr);
+        if( hIdentifyingDriver != nullptr &&
             EQUAL( GDALGetDescription(hIdentifyingDriver), "GML" ) )
         {
             VSIUnlink( pszDest );
@@ -1325,13 +1325,13 @@ GDALDataset* GDALVectorTranslateCreateCopy(
  * and GDALVectorTranslateOptionsFree() respectively.
  * pszDest and hDstDS cannot be used at the same time.
  *
- * @param pszDest the destination dataset path or NULL.
- * @param hDstDS the destination dataset or NULL.
+ * @param pszDest the destination dataset path or nullptr.
+ * @param hDstDS the destination dataset or nullptr.
  * @param nSrcCount the number of input datasets (only 1 supported currently)
  * @param pahSrcDS the list of input datasets.
- * @param psOptionsIn the options struct returned by GDALVectorTranslateOptionsNew() or NULL.
+ * @param psOptionsIn the options struct returned by GDALVectorTranslateOptionsNew() or nullptr.
  * @param pbUsageError the pointer to int variable to determine any usage error has occurred
- * @return the output dataset (new dataset that must be closed using GDALClose(), or hDstDS is not NULL) or NULL in case of error.
+ * @return the output dataset (new dataset that must be closed using GDALClose(), or hDstDS is not nullptr) or nullptr in case of error.
  *
  * @since GDAL 2.1
  */
@@ -1344,21 +1344,21 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
     OGR2OGRSpatialReferenceHolder oOutputSRSHolder;
     OGRSpatialReference oSourceSRS;
     OGRSpatialReference oSpatSRS;
-    OGRSpatialReference *poSourceSRS = NULL;
-    OGRSpatialReference* poSpatSRS = NULL;
+    OGRSpatialReference *poSourceSRS = nullptr;
+    OGRSpatialReference* poSpatSRS = nullptr;
     bool bAppend = false;
     bool bUpdate = false;
     bool bOverwrite = false;
     CPLString osDateLineOffset;
     int nRetCode = 0;
 
-    if( pszDest == NULL && hDstDS == NULL )
+    if( pszDest == nullptr && hDstDS == nullptr )
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "pszDest == NULL && hDstDS == NULL");
+        CPLError( CE_Failure, CPLE_AppDefined, "pszDest == nullptr && hDstDS == nullptr");
 
         if(pbUsageError)
             *pbUsageError = TRUE;
-        return NULL;
+        return nullptr;
     }
     if( nSrcCount != 1 )
     {
@@ -1366,22 +1366,22 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 
         if(pbUsageError)
             *pbUsageError = TRUE;
-        return NULL;
+        return nullptr;
     }
 
     GDALDatasetH hSrcDS = pahSrcDS[0];
-    if( hSrcDS == NULL )
+    if( hSrcDS == nullptr )
     {
-        CPLError( CE_Failure, CPLE_AppDefined, "hSrcDS == NULL");
+        CPLError( CE_Failure, CPLE_AppDefined, "hSrcDS == nullptr");
 
         if(pbUsageError)
             *pbUsageError = TRUE;
-        return NULL;
+        return nullptr;
     }
 
     GDALVectorTranslateOptions* psOptions =
         (psOptionsIn) ? GDALVectorTranslateOptionsClone(psOptionsIn) :
-                        GDALVectorTranslateOptionsNew(NULL, NULL);
+                        GDALVectorTranslateOptionsNew(nullptr, nullptr);
 
     if( psOptions->eAccessMode == ACCESS_UPDATE )
     {
@@ -1397,7 +1397,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         bOverwrite = true;
         bUpdate = true;
     }
-    else if( hDstDS != NULL )
+    else if( hDstDS != nullptr )
     {
         bUpdate = true;
     }
@@ -1410,7 +1410,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         if(pbUsageError)
             *pbUsageError = TRUE;
         GDALVectorTranslateOptionsFree(psOptions);
-        return NULL;
+        return nullptr;
     }
 
     if (psOptions->papszFieldMap && !bAppend)
@@ -1419,7 +1419,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         if(pbUsageError)
             *pbUsageError = TRUE;
         GDALVectorTranslateOptionsFree(psOptions);
-        return NULL;
+        return nullptr;
     }
 
     if (psOptions->papszFieldMap && psOptions->bAddMissingFields)
@@ -1428,7 +1428,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         if(pbUsageError)
             *pbUsageError = TRUE;
         GDALVectorTranslateOptionsFree(psOptions);
-        return NULL;
+        return nullptr;
     }
 
     if( psOptions->papszFieldTypesToString && psOptions->papszMapFieldType )
@@ -1437,57 +1437,57 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         if(pbUsageError)
             *pbUsageError = TRUE;
         GDALVectorTranslateOptionsFree(psOptions);
-        return NULL;
+        return nullptr;
     }
 
-    if( psOptions->pszSourceSRSDef != NULL && psOptions->pszOutputSRSDef == NULL && psOptions->pszSpatSRSDef == NULL )
+    if( psOptions->pszSourceSRSDef != nullptr && psOptions->pszOutputSRSDef == nullptr && psOptions->pszSpatSRSDef == nullptr )
     {
         CPLError( CE_Failure, CPLE_IllegalArg, "if -s_srs is specified, -t_srs and/or -spat_srs must also be specified.");
         if(pbUsageError)
             *pbUsageError = TRUE;
         GDALVectorTranslateOptionsFree(psOptions);
-        return NULL;
+        return nullptr;
     }
 
-    if( psOptions->bClipSrc && psOptions->pszClipSrcDS != NULL)
+    if( psOptions->bClipSrc && psOptions->pszClipSrcDS != nullptr)
     {
         psOptions->hClipSrc = (OGRGeometryH) LoadGeometry(psOptions->pszClipSrcDS, psOptions->pszClipSrcSQL, psOptions->pszClipSrcLayer, psOptions->pszClipSrcWhere);
-        if (psOptions->hClipSrc == NULL)
+        if (psOptions->hClipSrc == nullptr)
         {
             CPLError( CE_Failure,CPLE_IllegalArg, "cannot load source clip geometry");
             GDALVectorTranslateOptionsFree(psOptions);
-            return NULL;
+            return nullptr;
         }
     }
-    else if( psOptions->bClipSrc && psOptions->hClipSrc == NULL )
+    else if( psOptions->bClipSrc && psOptions->hClipSrc == nullptr )
     {
         if (psOptions->hSpatialFilter)
             psOptions->hClipSrc = (OGRGeometryH)((OGRGeometry *)(psOptions->hSpatialFilter))->clone();
-        if (psOptions->hClipSrc == NULL)
+        if (psOptions->hClipSrc == nullptr)
         {
             CPLError( CE_Failure, CPLE_IllegalArg, "-clipsrc must be used with -spat option or a\n"
                              "bounding box, WKT string or datasource must be specified");
             if(pbUsageError)
                 *pbUsageError = TRUE;
             GDALVectorTranslateOptionsFree(psOptions);
-            return NULL;
+            return nullptr;
         }
     }
 
-    if( psOptions->pszClipDstDS != NULL)
+    if( psOptions->pszClipDstDS != nullptr)
     {
         psOptions->hClipDst = (OGRGeometryH) LoadGeometry(psOptions->pszClipDstDS, psOptions->pszClipDstSQL, psOptions->pszClipDstLayer, psOptions->pszClipDstWhere);
-        if (psOptions->hClipDst == NULL)
+        if (psOptions->hClipDst == nullptr)
         {
             CPLError( CE_Failure, CPLE_IllegalArg, "cannot load dest clip geometry");
             GDALVectorTranslateOptionsFree(psOptions);
-            return NULL;
+            return nullptr;
         }
     }
 
     GDALDataset *poDS = (GDALDataset *) hSrcDS;
-    GDALDataset *poODS = NULL;
-    GDALDriver *poDriver = NULL;
+    GDALDataset *poODS = nullptr;
+    GDALDriver *poDriver = nullptr;
     CPLString osDestFilename;
 
     if(hDstDS)
@@ -1504,11 +1504,11 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         (bOverwrite || bAppend) )
     {
         bool bError = false;
-        if (psOptions->pszNewLayerName == NULL)
+        if (psOptions->pszNewLayerName == nullptr)
             bError = true;
         else if (CSLCount(psOptions->papszLayers) == 1)
             bError = strcmp(psOptions->pszNewLayerName, psOptions->papszLayers[0]) == 0;
-        else if (psOptions->pszSQLStatement == NULL)
+        else if (psOptions->pszSQLStatement == nullptr)
             bError = true;
         if (bError)
         {
@@ -1517,7 +1517,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
                         "a single source layer name,\nor a -sql statement, and "
                         "name must be different from an existing layer.");
             GDALVectorTranslateOptionsFree(psOptions);
-            return NULL;
+            return nullptr;
         }
     }
     else if( !bUpdate && strcmp(osDestFilename, poDS->GetDescription()) == 0 &&
@@ -1527,35 +1527,35 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
                   "Source and destination datasets must be different "
                   "in non-update mode." );
         GDALVectorTranslateOptionsFree(psOptions);
-        return NULL;
+        return nullptr;
     }
 
 /* -------------------------------------------------------------------- */
 /*      Try opening the output datasource as an existing, writable      */
 /* -------------------------------------------------------------------- */
 
-    if( bUpdate && poODS == NULL )
+    if( bUpdate && poODS == nullptr )
     {
         poODS = (GDALDataset*) GDALOpenEx( osDestFilename,
-                GDAL_OF_UPDATE | GDAL_OF_VECTOR, NULL, psOptions->papszDestOpenOptions, NULL );
+                GDAL_OF_UPDATE | GDAL_OF_VECTOR, nullptr, psOptions->papszDestOpenOptions, nullptr );
 
-        if( poODS == NULL )
+        if( poODS == nullptr )
         {
             if (bOverwrite || bAppend)
             {
                 poODS = (GDALDataset*) GDALOpenEx( osDestFilename,
-                            GDAL_OF_VECTOR, NULL, psOptions->papszDestOpenOptions, NULL );
-                if (poODS == NULL)
+                            GDAL_OF_VECTOR, nullptr, psOptions->papszDestOpenOptions, nullptr );
+                if (poODS == nullptr)
                 {
                     /* OK the datasource doesn't exist at all */
                     bUpdate = false;
                 }
                 else
                 {
-                    if( poODS != NULL )
+                    if( poODS != nullptr )
                         poDriver = poODS->GetDriver();
                     GDALClose( (GDALDatasetH) poODS );
-                    poODS = NULL;
+                    poODS = nullptr;
                 }
             }
 
@@ -1565,7 +1565,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
                         "Unable to open existing output datasource `%s'.",
                         osDestFilename.c_str() );
                 GDALVectorTranslateOptionsFree(psOptions);
-                return NULL;
+                return nullptr;
             }
         }
         else if( CSLCount(psOptions->papszDSCO) > 0 )
@@ -1587,12 +1587,12 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         GDALDriverManager *poDM = GetGDALDriverManager();
 
         poDriver = poDM->GetDriverByName(psOptions->pszFormat);
-        if( poDriver == NULL )
+        if( poDriver == nullptr )
         {
             CPLError( CE_Failure, CPLE_AppDefined,
                       "Unable to find driver `%s'.", psOptions->pszFormat );
             GDALVectorTranslateOptionsFree(psOptions);
-            return NULL;
+            return nullptr;
         }
 
         char** papszDriverMD = poDriver->GetMetadata();
@@ -1603,7 +1603,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
                       "%s driver has no vector capabilities.",
                       psOptions->pszFormat );
             GDALVectorTranslateOptionsFree(psOptions);
-            return NULL;
+            return nullptr;
         }
 
         if( !CPLTestBool( CSLFetchNameValueDef(papszDriverMD,
@@ -1622,10 +1622,10 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
                       "%s driver does not support data source creation.",
                     psOptions->pszFormat );
             GDALVectorTranslateOptionsFree(psOptions);
-            return NULL;
+            return nullptr;
         }
 
-        if( psOptions->papszDestOpenOptions != NULL )
+        if( psOptions->papszDestOpenOptions != nullptr )
         {
             CPLError(CE_Warning, CPLE_AppDefined, "-doo ignored when creating the output datasource.");
         }
@@ -1640,10 +1640,10 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 /* -------------------------------------------------------------------- */
         VSIStatBufL  sStat;
         if (EQUAL(poDriver->GetDescription(), "ESRI Shapefile") &&
-            psOptions->pszSQLStatement == NULL &&
+            psOptions->pszSQLStatement == nullptr &&
             (CSLCount(psOptions->papszLayers) > 1 ||
              (CSLCount(psOptions->papszLayers) == 0 && poDS->GetLayerCount() > 1)) &&
-            psOptions->pszNewLayerName == NULL &&
+            psOptions->pszNewLayerName == nullptr &&
             EQUAL(CPLGetExtension(osDestFilename), "SHP") &&
             VSIStatL(osDestFilename, &sStat) != 0)
         {
@@ -1654,7 +1654,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
                       "for shapefile datastore.",
                       osDestFilename.c_str() );
                 GDALVectorTranslateOptionsFree(psOptions);
-                return NULL;
+                return nullptr;
             }
         }
 
@@ -1662,12 +1662,12 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 /*      Create the output data source.                                  */
 /* -------------------------------------------------------------------- */
         poODS = poDriver->Create( osDestFilename, 0, 0, 0, GDT_Unknown, psOptions->papszDSCO );
-        if( poODS == NULL )
+        if( poODS == nullptr )
         {
             CPLError( CE_Failure, CPLE_AppDefined, "%s driver failed to create %s",
                     psOptions->pszFormat, osDestFilename.c_str() );
             GDALVectorTranslateOptionsFree(psOptions);
-            return NULL;
+            return nullptr;
         }
         bNewDataSource = true;
 
@@ -1684,7 +1684,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         }
         for(char** papszIter = psOptions->papszMetadataOptions; papszIter && *papszIter; ++papszIter )
         {
-            char    *pszKey = NULL;
+            char    *pszKey = nullptr;
             const char *pszValue = CPLParseNameValue( *papszIter, &pszKey );
             if( pszKey )
             {
@@ -1724,7 +1724,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 /* -------------------------------------------------------------------- */
 /*      Parse the output SRS definition if possible.                    */
 /* -------------------------------------------------------------------- */
-    if( psOptions->pszOutputSRSDef != NULL )
+    if( psOptions->pszOutputSRSDef != nullptr )
     {
         oOutputSRSHolder.assignNoRefIncrease(new OGRSpatialReference());
         if( oOutputSRSHolder.get()->
@@ -1733,23 +1733,23 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
             CPLError( CE_Failure, CPLE_AppDefined, "Failed to process SRS definition: %s",
                     psOptions->pszOutputSRSDef );
             GDALVectorTranslateOptionsFree(psOptions);
-            if( hDstDS == NULL ) GDALClose( poODS );
-            return NULL;
+            if( hDstDS == nullptr ) GDALClose( poODS );
+            return nullptr;
         }
     }
 
 /* -------------------------------------------------------------------- */
 /*      Parse the source SRS definition if possible.                    */
 /* -------------------------------------------------------------------- */
-    if( psOptions->pszSourceSRSDef != NULL )
+    if( psOptions->pszSourceSRSDef != nullptr )
     {
         if( oSourceSRS.SetFromUserInput( psOptions->pszSourceSRSDef ) != OGRERR_NONE )
         {
             CPLError( CE_Failure, CPLE_AppDefined, "Failed to process SRS definition: %s",
                     psOptions->pszSourceSRSDef );
             GDALVectorTranslateOptionsFree(psOptions);
-            if( hDstDS == NULL ) GDALClose( poODS );
-            return NULL;
+            if( hDstDS == nullptr ) GDALClose( poODS );
+            return nullptr;
         }
         poSourceSRS = &oSourceSRS;
     }
@@ -1757,14 +1757,14 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 /* -------------------------------------------------------------------- */
 /*      Parse spatial filter SRS if needed.                             */
 /* -------------------------------------------------------------------- */
-    if( psOptions->hSpatialFilter != NULL && psOptions->pszSpatSRSDef != NULL )
+    if( psOptions->hSpatialFilter != nullptr && psOptions->pszSpatSRSDef != nullptr )
     {
         if( psOptions->pszSQLStatement )
         {
             CPLError( CE_Failure, CPLE_IllegalArg, "-spat_srs not compatible with -sql.");
             GDALVectorTranslateOptionsFree(psOptions);
-            if( hDstDS == NULL ) GDALClose( poODS );
-            return NULL;
+            if( hDstDS == nullptr ) GDALClose( poODS );
+            return nullptr;
         }
         OGREnvelope sEnvelope;
         ((OGRGeometry*)psOptions->hSpatialFilter)->getEnvelope(&sEnvelope);
@@ -1773,12 +1773,12 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
             CPLError( CE_Failure, CPLE_AppDefined, "Failed to process SRS definition: %s",
                     psOptions->pszSpatSRSDef );
             GDALVectorTranslateOptionsFree(psOptions);
-            if( hDstDS == NULL ) GDALClose( poODS );
-            return NULL;
+            if( hDstDS == nullptr ) GDALClose( poODS );
+            return nullptr;
         }
         poSpatSRS = &oSpatSRS;
     }
-    else if( psOptions->hClipSrc != NULL && psOptions->hSpatialFilter == NULL )
+    else if( psOptions->hClipSrc != nullptr && psOptions->hSpatialFilter == nullptr )
     {
         // Check OLCFastSpatialFilter
         if (poDS->TestCapability(OLCFastSpatialFilter))
@@ -1788,7 +1788,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 /*      Create a transformation object from the source to               */
 /*      destination coordinate system.                                  */
 /* -------------------------------------------------------------------- */
-    GCPCoordTransformation *poGCPCoordTrans = NULL;
+    GCPCoordTransformation *poGCPCoordTrans = nullptr;
     if( psOptions->nGCPCount > 0 )
     {
         poGCPCoordTrans = new GCPCoordTransformation( psOptions->nGCPCount, psOptions->pasGCPs,
@@ -1797,7 +1797,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         if( !(poGCPCoordTrans->IsValid()) )
         {
             delete poGCPCoordTrans;
-            poGCPCoordTrans = NULL;
+            poGCPCoordTrans = nullptr;
         }
     }
 
@@ -1866,26 +1866,26 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 /* -------------------------------------------------------------------- */
 /*      Special case for -sql clause.  No source layers required.       */
 /* -------------------------------------------------------------------- */
-    if( psOptions->pszSQLStatement != NULL )
+    if( psOptions->pszSQLStatement != nullptr )
     {
         /* Special case: if output=input, then we must likely destroy the */
         /* old table before to avoid transaction issues. */
-        if( poDS == poODS && psOptions->pszNewLayerName != NULL && bOverwrite )
-            GetLayerAndOverwriteIfNecessary(poODS, psOptions->pszNewLayerName, bOverwrite, NULL, NULL);
+        if( poDS == poODS && psOptions->pszNewLayerName != nullptr && bOverwrite )
+            GetLayerAndOverwriteIfNecessary(poODS, psOptions->pszNewLayerName, bOverwrite, nullptr, nullptr);
 
-        if( psOptions->pszWHERE != NULL )
+        if( psOptions->pszWHERE != nullptr )
             CPLError( CE_Warning, CPLE_AppDefined, "-where clause ignored in combination with -sql." );
         if( CSLCount(psOptions->papszLayers) > 0 )
             CPLError( CE_Warning, CPLE_AppDefined, "layer names ignored in combination with -sql." );
 
         OGRLayer *poResultSet
             = poDS->ExecuteSQL( psOptions->pszSQLStatement,
-                                (psOptions->pszGeomField == NULL) ? (OGRGeometry*)psOptions->hSpatialFilter : NULL,
+                                (psOptions->pszGeomField == nullptr) ? (OGRGeometry*)psOptions->hSpatialFilter : nullptr,
                                 psOptions->pszDialect );
 
-        if( poResultSet != NULL )
+        if( poResultSet != nullptr )
         {
-            if( psOptions->hSpatialFilter != NULL && psOptions->pszGeomField != NULL )
+            if( psOptions->hSpatialFilter != nullptr && psOptions->pszGeomField != nullptr )
             {
                 int iGeomField = poResultSet->GetLayerDefn()->GetGeomFieldIndex(psOptions->pszGeomField);
                 if( iGeomField >= 0 )
@@ -1896,8 +1896,8 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
             }
 
             GIntBig nCountLayerFeatures = 0;
-            GDALProgressFunc pfnProgress = NULL;
-            void        *pProgressArg = NULL;
+            GDALProgressFunc pfnProgress = nullptr;
+            void        *pProgressArg = nullptr;
             if (psOptions->bDisplayProgress)
             {
                 if (bRandomLayerReading)
@@ -1922,7 +1922,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
             if (psOptions->bSplitListFields)
             {
                 poPassedLayer = new OGRSplitListFieldLayer(poPassedLayer, psOptions->nMaxSplitListSubFields);
-                int nRet = ((OGRSplitListFieldLayer*)poPassedLayer)->BuildLayerDefn(NULL, NULL);
+                int nRet = ((OGRSplitListFieldLayer*)poPassedLayer)->BuildLayerDefn(nullptr, nullptr);
                 if (!nRet)
                 {
                     delete poPassedLayer;
@@ -1937,7 +1937,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 /* -------------------------------------------------------------------- */
             VSIStatBufL  sStat;
             if (EQUAL(poDriver->GetDescription(), "ESRI Shapefile") &&
-                psOptions->pszNewLayerName == NULL &&
+                psOptions->pszNewLayerName == nullptr &&
                 VSIStatL(osDestFilename, &sStat) == 0 && VSI_ISREG(sStat.st_mode))
             {
                 psOptions->pszNewLayerName = CPLStrdup(CPLGetBasename(osDestFilename));
@@ -1950,9 +1950,9 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 
             poPassedLayer->ResetReading();
 
-            if( psInfo == NULL ||
-                !oTranslator.Translate( NULL, psInfo,
-                                        nCountLayerFeatures, NULL,
+            if( psInfo == nullptr ||
+                !oTranslator.Translate( nullptr, psInfo,
+                                        nCountLayerFeatures, nullptr,
                                         nTotalEventsDone,
                                         pfnProgress, pProgressArg, psOptions ))
             {
@@ -1986,9 +1986,9 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         {
             CPLError( CE_Failure, CPLE_AppDefined, "-splitlistfields not supported in this mode" );
             GDALVectorTranslateOptionsFree(psOptions);
-            if( hDstDS == NULL ) GDALClose( poODS );
+            if( hDstDS == nullptr ) GDALClose( poODS );
             delete poGCPCoordTrans;
-            return NULL;
+            return nullptr;
         }
 
         // Make sure to probe all layers in case some are by default invisible
@@ -1997,14 +1997,14 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         {
             OGRLayer        *poLayer = poDS->GetLayerByName(*papszIter);
 
-            if( poLayer == NULL )
+            if( poLayer == nullptr )
             {
                 CPLError( CE_Failure, CPLE_AppDefined, "Couldn't fetch requested layer %s!",
                           *papszIter );
                 GDALVectorTranslateOptionsFree(psOptions);
-                if( hDstDS == NULL ) GDALClose( poODS );
+                if( hDstDS == nullptr ) GDALClose( poODS );
                 delete poGCPCoordTrans;
-                return NULL;
+                return nullptr;
             }
         }
 
@@ -2019,14 +2019,14 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 /* -------------------------------------------------------------------- */
         VSIStatBufL  sStat;
         if (EQUAL(poDriver->GetDescription(), "ESRI Shapefile") &&
-            (CSLCount(psOptions->papszLayers) == 1 || nSrcLayerCount == 1) && psOptions->pszNewLayerName == NULL &&
+            (CSLCount(psOptions->papszLayers) == 1 || nSrcLayerCount == 1) && psOptions->pszNewLayerName == nullptr &&
             VSIStatL(osDestFilename, &sStat) == 0 && VSI_ISREG(sStat.st_mode))
         {
             psOptions->pszNewLayerName = CPLStrdup(CPLGetBasename(osDestFilename));
         }
 
-        GDALProgressFunc pfnProgress = NULL;
-        void        *pProgressArg = NULL;
+        GDALProgressFunc pfnProgress = nullptr;
+        void        *pProgressArg = nullptr;
         if ( !psOptions->bQuiet )
         {
             pfnProgress = psOptions->pfnProgress;
@@ -2043,14 +2043,14 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
             {
                 OGRLayer        *poLayer = poDS->GetLayer(iLayer);
 
-                if( poLayer == NULL )
+                if( poLayer == nullptr )
                 {
                     CPLError( CE_Failure, CPLE_AppDefined, "Couldn't fetch advertised layer %d!",
                             iLayer );
                     GDALVectorTranslateOptionsFree(psOptions);
-                    if( hDstDS == NULL ) GDALClose( poODS );
+                    if( hDstDS == nullptr ) GDALClose( poODS );
                     delete poGCPCoordTrans;
-                    return NULL;
+                    return nullptr;
                 }
 
                 psOptions->papszLayers[iLayer] = CPLStrdup(poLayer->GetName());
@@ -2062,13 +2062,13 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
             if ( bSrcIsOSM )
             {
                 CPLString osInterestLayers = "SET interest_layers =";
-                for( int iLayer = 0; psOptions->papszLayers[iLayer] != NULL; iLayer++ )
+                for( int iLayer = 0; psOptions->papszLayers[iLayer] != nullptr; iLayer++ )
                 {
                     if( iLayer != 0 ) osInterestLayers += ",";
                     osInterestLayers += psOptions->papszLayers[iLayer];
                 }
 
-                poDS->ExecuteSQL(osInterestLayers.c_str(), NULL, NULL);
+                poDS->ExecuteSQL(osInterestLayers.c_str(), nullptr, nullptr);
             }
         }
 
@@ -2080,21 +2080,21 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         for( int iLayer = 0; iLayer < nSrcLayerCount; iLayer++ )
         {
             OGRLayer        *poLayer = poDS->GetLayer(iLayer);
-            if( poLayer == NULL )
+            if( poLayer == nullptr )
             {
                 CPLError( CE_Failure, CPLE_AppDefined, "Couldn't fetch advertised layer %d!",
                         iLayer );
                 GDALVectorTranslateOptionsFree(psOptions);
-                if( hDstDS == NULL ) GDALClose( poODS );
+                if( hDstDS == nullptr ) GDALClose( poODS );
                 delete poGCPCoordTrans;
-                return NULL;
+                return nullptr;
             }
 
             pasAssocLayers[iLayer].poSrcLayer = poLayer;
 
             if( CSLFindString(psOptions->papszLayers, poLayer->GetName()) >= 0 )
             {
-                if( psOptions->pszWHERE != NULL )
+                if( psOptions->pszWHERE != nullptr )
                 {
                     if( poLayer->SetAttributeFilter( psOptions->pszWHERE ) != OGRERR_NONE )
                     {
@@ -2105,9 +2105,9 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
                         if (!psOptions->bSkipFailures)
                         {
                             GDALVectorTranslateOptionsFree(psOptions);
-                            if( hDstDS == NULL ) GDALClose( poODS );
+                            if( hDstDS == nullptr ) GDALClose( poODS );
                             delete poGCPCoordTrans;
-                            return NULL;
+                            return nullptr;
                         }
                     }
                 }
@@ -2119,7 +2119,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 
                 oMapLayerToIdx[ poLayer ] = iLayer;
             }
-            pasAssocLayers[iLayer].psInfo = NULL;
+            pasAssocLayers[iLayer].psInfo = nullptr;
         }
 
 /* -------------------------------------------------------------------- */
@@ -2128,12 +2128,12 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         bool bTargetLayersHaveBeenCreated = false;
         while( true )
         {
-            OGRLayer* poFeatureLayer = NULL;
+            OGRLayer* poFeatureLayer = nullptr;
             OGRFeature* poFeature = poDS->GetNextFeature(&poFeatureLayer,
-                                                         NULL,
+                                                         nullptr,
                                                          pfnProgress,
                                                          pProgressArg);
-            if( poFeature == NULL )
+            if( poFeature == nullptr )
                 break;
             std::map<OGRLayer*, int>::const_iterator oIter =
                                                 oMapLayerToIdx.find(poFeatureLayer);
@@ -2163,13 +2163,13 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
                                                                psOptions,
                                                                nTotalEventsDone);
 
-                        if( psInfo == NULL && !psOptions->bSkipFailures )
+                        if( psInfo == nullptr && !psOptions->bSkipFailures )
                         {
                             GDALVectorTranslateOptionsFree(psOptions);
-                            if( hDstDS == NULL ) GDALClose( poODS );
+                            if( hDstDS == nullptr ) GDALClose( poODS );
                             delete poGCPCoordTrans;
                             OGRFeature::DestroyFeature(poFeature);
-                            return NULL;
+                            return nullptr;
                         }
 
                         pasAssocLayers[iLayer].psInfo = psInfo;
@@ -2180,11 +2180,11 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 
                 int iLayer = oIter->second;
                 TargetLayerInfo *psInfo = pasAssocLayers[iLayer].psInfo;
-                if( (psInfo == NULL ||
+                if( (psInfo == nullptr ||
                      !oTranslator.Translate( poFeature, psInfo,
-                                            0, NULL,
+                                            0, nullptr,
                                             nTotalEventsDone,
-                                            NULL, NULL, psOptions ))
+                                            nullptr, nullptr, psOptions ))
                     && !psOptions->bSkipFailures )
                 {
                     CPLError( CE_Failure, CPLE_AppDefined,
@@ -2195,7 +2195,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
                     nRetCode = 1;
                     break;
                 }
-                if( psInfo == NULL )
+                if( psInfo == nullptr )
                     OGRFeature::DestroyFeature(poFeature);
             }
         }  // while true
@@ -2220,12 +2220,12 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
                                                        psOptions,
                                                        nTotalEventsDone);
 
-                if( psInfo == NULL && !psOptions->bSkipFailures )
+                if( psInfo == nullptr && !psOptions->bSkipFailures )
                 {
                     GDALVectorTranslateOptionsFree(psOptions);
-                    if( hDstDS == NULL ) GDALClose( poODS );
+                    if( hDstDS == nullptr ) GDALClose( poODS );
                     delete poGCPCoordTrans;
-                    return NULL;
+                    return nullptr;
                 }
 
                 pasAssocLayers[iLayer].psInfo = psInfo;
@@ -2246,7 +2246,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
     else
     {
         int nLayerCount = 0;
-        OGRLayer** papoLayers = NULL;
+        OGRLayer** papoLayers = nullptr;
 
 /* -------------------------------------------------------------------- */
 /*      Process each data source layer.                                 */
@@ -2262,14 +2262,14 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
             {
                 OGRLayer        *poLayer = poDS->GetLayer(iLayer);
 
-                if( poLayer == NULL )
+                if( poLayer == nullptr )
                 {
                     CPLError( CE_Failure, CPLE_AppDefined, "Couldn't fetch advertised layer %d!",
                             iLayer );
                     GDALVectorTranslateOptionsFree(psOptions);
-                    if( hDstDS == NULL ) GDALClose( poODS );
+                    if( hDstDS == nullptr ) GDALClose( poODS );
                     delete poGCPCoordTrans;
-                    return NULL;
+                    return nullptr;
                 }
 
                 papoLayers[iLayer] = poLayer;
@@ -2284,21 +2284,21 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
             papoLayers = (OGRLayer**)CPLMalloc(sizeof(OGRLayer*) * nLayerCount);
 
             for( int iLayer = 0;
-                psOptions->papszLayers[iLayer] != NULL;
+                psOptions->papszLayers[iLayer] != nullptr;
                 iLayer++ )
             {
                 OGRLayer        *poLayer = poDS->GetLayerByName(psOptions->papszLayers[iLayer]);
 
-                if( poLayer == NULL )
+                if( poLayer == nullptr )
                 {
                     CPLError( CE_Failure, CPLE_AppDefined, "Couldn't fetch requested layer '%s'!",
                              psOptions->papszLayers[iLayer] );
                     if (!psOptions->bSkipFailures)
                     {
                         GDALVectorTranslateOptionsFree(psOptions);
-                        if( hDstDS == NULL ) GDALClose( poODS );
+                        if( hDstDS == nullptr ) GDALClose( poODS );
                         delete poGCPCoordTrans;
-                        return NULL;
+                        return nullptr;
                     }
                 }
 
@@ -2313,7 +2313,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 /* -------------------------------------------------------------------- */
         VSIStatBufL  sStat;
         if (EQUAL(poDriver->GetDescription(), "ESRI Shapefile") &&
-            nLayerCount == 1 && psOptions->pszNewLayerName == NULL &&
+            nLayerCount == 1 && psOptions->pszNewLayerName == nullptr &&
             VSIStatL(osDestFilename, &sStat) == 0 && VSI_ISREG(sStat.st_mode))
         {
             psOptions->pszNewLayerName = CPLStrdup(CPLGetBasename(osDestFilename));
@@ -2330,10 +2330,10 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
             iLayer++ )
         {
             OGRLayer        *poLayer = papoLayers[iLayer];
-            if (poLayer == NULL)
+            if (poLayer == nullptr)
                 continue;
 
-            if( psOptions->pszWHERE != NULL )
+            if( psOptions->pszWHERE != nullptr )
             {
                 if( poLayer->SetAttributeFilter( psOptions->pszWHERE ) != OGRERR_NONE )
                 {
@@ -2342,9 +2342,9 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
                     if (!psOptions->bSkipFailures)
                     {
                         GDALVectorTranslateOptionsFree(psOptions);
-                        if( hDstDS == NULL ) GDALClose( poODS );
+                        if( hDstDS == nullptr ) GDALClose( poODS );
                         delete poGCPCoordTrans;
-                        return NULL;
+                        return nullptr;
                     }
                 }
             }
@@ -2372,11 +2372,11 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
             iLayer++ )
         {
             OGRLayer        *poLayer = papoLayers[iLayer];
-            if (poLayer == NULL)
+            if (poLayer == nullptr)
                 continue;
 
-            GDALProgressFunc pfnProgress = NULL;
-            void        *pProgressArg = NULL;
+            GDALProgressFunc pfnProgress = nullptr;
+            void        *pProgressArg = nullptr;
 
             OGRLayer* poPassedLayer = poLayer;
             if (psOptions->bSplitListFields)
@@ -2395,8 +2395,8 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
                 }
                 else
                 {
-                    pfnProgress = NULL;
-                    pProgressArg = NULL;
+                    pfnProgress = nullptr;
+                    pProgressArg = nullptr;
                 }
 
                 int nRet = ((OGRSplitListFieldLayer*)poPassedLayer)->BuildLayerDefn(pfnProgress, pProgressArg);
@@ -2408,8 +2408,8 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 
                 if (psOptions->bDisplayProgress)
                     GDALDestroyScaledProgress(pProgressArg);
-                pfnProgress = NULL;
-                pProgressArg = NULL;
+                pfnProgress = nullptr;
+                pProgressArg = nullptr;
             }
 
             if (psOptions->bDisplayProgress)
@@ -2437,9 +2437,9 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 
             poPassedLayer->ResetReading();
 
-            if( (psInfo == NULL ||
-                !oTranslator.Translate( NULL, psInfo,
-                                        panLayerCountFeatures[iLayer], NULL,
+            if( (psInfo == nullptr ||
+                !oTranslator.Translate( nullptr, psInfo,
+                                        panLayerCountFeatures[iLayer], nullptr,
                                         nTotalEventsDone,
                                         pfnProgress, pProgressArg, psOptions ))
                 && !psOptions->bSkipFailures )
@@ -2488,8 +2488,8 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
         return (GDALDatasetH) poODS;
     else
     {
-        if( hDstDS == NULL ) GDALClose( poODS );
-        return NULL;
+        if( hDstDS == nullptr ) GDALClose( poODS );
+        return nullptr;
     }
 }
 
@@ -2498,7 +2498,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 /************************************************************************/
 static void SetZ (OGRGeometry* poGeom, double dfZ )
 {
-    if (poGeom == NULL)
+    if (poGeom == nullptr)
         return;
     switch (wkbFlatten(poGeom->getGeometryType()))
     {
@@ -2586,7 +2586,7 @@ OGRLayer* GetLayerAndOverwriteIfNecessary(GDALDataset *poDstDS,
     CPLErrorReset();
 
     int iLayer = -1;
-    if (poDstLayer != NULL)
+    if (poDstLayer != nullptr)
     {
         int nLayerCount = poDstDS->GetLayerCount();
         for( iLayer = 0; iLayer < nLayerCount; iLayer++ )
@@ -2598,7 +2598,7 @@ OGRLayer* GetLayerAndOverwriteIfNecessary(GDALDataset *poDstDS,
 
         if (iLayer == nLayerCount)
             /* should not happen with an ideal driver */
-            poDstLayer = NULL;
+            poDstLayer = nullptr;
     }
 
 /* -------------------------------------------------------------------- */
@@ -2606,7 +2606,7 @@ OGRLayer* GetLayerAndOverwriteIfNecessary(GDALDataset *poDstDS,
 /*      question we need to delete it now so it will get recreated      */
 /*      (overwritten).                                                  */
 /* -------------------------------------------------------------------- */
-    if( poDstLayer != NULL && bOverwrite )
+    if( poDstLayer != nullptr && bOverwrite )
     {
         if( poDstDS->DeleteLayer( iLayer ) != OGRERR_NONE )
         {
@@ -2620,7 +2620,7 @@ OGRLayer* GetLayerAndOverwriteIfNecessary(GDALDataset *poDstDS,
             if( pbOverwriteActuallyDone )
                 *pbOverwriteActuallyDone = true;
         }
-        poDstLayer = NULL;
+        poDstLayer = nullptr;
     }
 
     return poDstLayer;
@@ -2666,7 +2666,7 @@ void DoFieldTypeConversion(GDALDataset* poDstDS, OGRFieldDefn& oFieldDefn,
                            bool bForceNullable,
                            bool bUnsetDefault)
 {
-    if (papszFieldTypesToString != NULL )
+    if (papszFieldTypesToString != nullptr )
     {
         CPLString osLookupString;
         osLookupString.Printf("%s(%s)",
@@ -2685,7 +2685,7 @@ void DoFieldTypeConversion(GDALDataset* poDstDS, OGRFieldDefn& oFieldDefn,
             oFieldDefn.SetType(OFTString);
         }
     }
-    else if (papszMapFieldType != NULL)
+    else if (papszMapFieldType != nullptr)
     {
         CPLString osLookupString;
         osLookupString.Printf("%s(%s)",
@@ -2693,12 +2693,12 @@ void DoFieldTypeConversion(GDALDataset* poDstDS, OGRFieldDefn& oFieldDefn,
                         OGRFieldDefn::GetFieldSubTypeName(oFieldDefn.GetSubType()));
 
         const char* pszType = CSLFetchNameValue(papszMapFieldType, osLookupString);
-        if( pszType == NULL )
+        if( pszType == nullptr )
             pszType = CSLFetchNameValue(papszMapFieldType,
                                         OGRFieldDefn::GetFieldTypeName(oFieldDefn.GetType()));
-        if( pszType == NULL )
+        if( pszType == nullptr )
             pszType = CSLFetchNameValue(papszMapFieldType, "All");
-        if( pszType != NULL )
+        if( pszType != nullptr )
         {
             int iSubType;
             int iType = GetFieldType(pszType, &iSubType);
@@ -2720,12 +2720,12 @@ void DoFieldTypeConversion(GDALDataset* poDstDS, OGRFieldDefn& oFieldDefn,
     if( bForceNullable )
         oFieldDefn.SetNullable(TRUE);
     if( bUnsetDefault )
-        oFieldDefn.SetDefault(NULL);
+        oFieldDefn.SetDefault(nullptr);
 
-    if( poDstDS->GetDriver() != NULL &&
-        poDstDS->GetDriver()->GetMetadataItem(GDAL_DMD_CREATIONFIELDDATATYPES) != NULL &&
+    if( poDstDS->GetDriver() != nullptr &&
+        poDstDS->GetDriver()->GetMetadataItem(GDAL_DMD_CREATIONFIELDDATATYPES) != nullptr &&
         strstr(poDstDS->GetDriver()->GetMetadataItem(GDAL_DMD_CREATIONFIELDDATATYPES),
-                OGRFieldDefn::GetFieldTypeName(oFieldDefn.GetType())) == NULL )
+                OGRFieldDefn::GetFieldTypeName(oFieldDefn.GetType())) == nullptr )
     {
         if( oFieldDefn.GetType() == OFTInteger64 )
         {
@@ -2750,8 +2750,8 @@ void DoFieldTypeConversion(GDALDataset* poDstDS, OGRFieldDefn& oFieldDefn,
                         oFieldDefn.GetNameRef());
         }
     }
-    else if( poDstDS->GetDriver() != NULL &&
-             poDstDS->GetDriver()->GetMetadataItem(GDAL_DMD_CREATIONFIELDDATATYPES) == NULL )
+    else if( poDstDS->GetDriver() != nullptr &&
+             poDstDS->GetDriver()->GetMetadataItem(GDAL_DMD_CREATIONFIELDDATATYPES) == nullptr )
     {
         // All drivers supporting OFTInteger64 should advertise it theoretically
         if( oFieldDefn.GetType() == OFTInteger64 )
@@ -2781,12 +2781,12 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
 {
     OGRLayer    *poDstLayer;
     OGRFeatureDefn *poSrcFDefn;
-    OGRFeatureDefn *poDstFDefn = NULL;
+    OGRFeatureDefn *poDstFDefn = nullptr;
     int eGType = m_eGType;
     bool bPreserveFID = m_bPreserveFID;
     bool bAppend = m_bAppend;
 
-    if( pszNewLayerName == NULL )
+    if( pszNewLayerName == nullptr )
         pszNewLayerName = poSrcLayer->GetName();
 
 /* -------------------------------------------------------------------- */
@@ -2801,7 +2801,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
     int nSrcGeomFieldCount = poSrcFDefn->GetGeomFieldCount();
     if (m_papszSelFields && !bAppend )
     {
-        for( int iField=0; m_papszSelFields[iField] != NULL; iField++)
+        for( int iField=0; m_papszSelFields[iField] != nullptr; iField++)
         {
             int iSrcField = poSrcFDefn->GetFieldIndex(m_papszSelFields[iField]);
             if (iSrcField >= 0)
@@ -2820,7 +2820,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
                     CPLError( CE_Failure, CPLE_AppDefined, "Field '%s' not found in source layer.",
                               m_papszSelFields[iField] );
                     if( !psOptions->bSkipFailures )
-                        return NULL;
+                        return nullptr;
                 }
             }
         }
@@ -2832,14 +2832,14 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
                                 "datasource does not support multiple geometry "
                                 "fields." );
             if( !psOptions->bSkipFailures )
-                return NULL;
+                return nullptr;
             else
                 anRequestedGeomFields.resize(0);
         }
     }
 
     OGRSpatialReference* poOutputSRS = m_poOutputSRS;
-    if( poOutputSRS == NULL && !m_bNullifyOutputSRS )
+    if( poOutputSRS == nullptr && !m_bNullifyOutputSRS )
     {
         if( nSrcGeomFieldCount == 1 || anRequestedGeomFields.empty() )
             poOutputSRS = poSrcLayer->GetSpatialRef();
@@ -2852,7 +2852,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
     }
 
     int iSrcZField = -1;
-    if (m_pszZField != NULL)
+    if (m_pszZField != nullptr)
     {
         iSrcZField = poSrcFDefn->GetFieldIndex(m_pszZField);
         if( iSrcZField < 0 )
@@ -2875,12 +2875,12 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
                                                  &bErrorOccurred,
                                                  &bOverwriteActuallyDone);
     if( bErrorOccurred )
-        return NULL;
+        return nullptr;
 
 /* -------------------------------------------------------------------- */
 /*      If the layer does not exist, then create it.                    */
 /* -------------------------------------------------------------------- */
-    if( poDstLayer == NULL )
+    if( poDstLayer == nullptr )
     {
         if( !m_poDstDS->TestCapability( ODsCCreateLayer ) )
         {
@@ -2888,7 +2888,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
                       "Layer '%s' does not already exist in the output dataset, and "
                       "cannot be created by the output driver.",
                       pszNewLayerName );
-            return NULL;
+            return nullptr;
         }
 
         bool bForceGType = ( eGType != GEOMTYPE_UNCHANGED );
@@ -2972,9 +2972,9 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
         else if( anRequestedGeomFields.empty() &&
                  nSrcGeomFieldCount >= 1 &&
                  !poSrcFDefn->GetGeomFieldDefn(0)->IsNullable() &&
-                 m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST) != NULL &&
-                 strstr(m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST), "GEOMETRY_NULLABLE") != NULL &&
-                 CSLFetchNameValue(m_papszLCO, "GEOMETRY_NULLABLE") == NULL&&
+                 m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST) != nullptr &&
+                 strstr(m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST), "GEOMETRY_NULLABLE") != nullptr &&
+                 CSLFetchNameValue(m_papszLCO, "GEOMETRY_NULLABLE") == nullptr&&
                  !m_bForceNullable )
         {
             papszLCOTemp = CSLSetNameValue(papszLCOTemp, "GEOMETRY_NULLABLE", "NO");
@@ -2986,8 +2986,8 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
         else if( anRequestedGeomFields.empty() &&
                  nSrcGeomFieldCount == 1 &&
                  m_poDstDS->TestCapability(ODsCCreateGeomFieldAfterCreateLayer) &&
-                 m_poSrcDS != NULL &&
-                 m_poSrcDS->GetDriver() != NULL &&
+                 m_poSrcDS != nullptr &&
+                 m_poSrcDS->GetDriver() != nullptr &&
                  EQUAL(m_poSrcDS->GetDriver()->GetDescription(), "GMLAS") )
         {
             anRequestedGeomFields.push_back(0);
@@ -2997,11 +2997,11 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
         // Force FID column as 64 bit if the source feature has a 64 bit FID,
         // the target driver supports 64 bit FID and the user didn't set it
         // manually.
-        if( poSrcLayer->GetMetadataItem(OLMD_FID64) != NULL &&
+        if( poSrcLayer->GetMetadataItem(OLMD_FID64) != nullptr &&
             EQUAL(poSrcLayer->GetMetadataItem(OLMD_FID64), "YES") &&
-            m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST) != NULL &&
-            strstr(m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST), "FID64") != NULL &&
-            CSLFetchNameValue(m_papszLCO, "FID64") == NULL )
+            m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST) != nullptr &&
+            strstr(m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST), "FID64") != nullptr &&
+            CSLFetchNameValue(m_papszLCO, "FID64") == nullptr )
         {
             papszLCOTemp = CSLSetNameValue(papszLCOTemp, "FID64", "YES");
             CPLDebug("GDALVectorTranslate", "Using FID64=YES");
@@ -3010,11 +3010,11 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
         // If output driver supports FID layer creation option, set it with
         // the FID column name of the source layer
         if( !m_bUnsetFid && !bAppend &&
-            poSrcLayer->GetFIDColumn() != NULL &&
+            poSrcLayer->GetFIDColumn() != nullptr &&
             !EQUAL(poSrcLayer->GetFIDColumn(), "") &&
-            m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST) != NULL &&
-            strstr(m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST), "='FID'") != NULL &&
-            CSLFetchNameValue(m_papszLCO, "FID") == NULL )
+            m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST) != nullptr &&
+            strstr(m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST), "='FID'") != nullptr &&
+            CSLFetchNameValue(m_papszLCO, "FID") == nullptr )
         {
             papszLCOTemp = CSLSetNameValue(papszLCOTemp, "FID", poSrcLayer->GetFIDColumn());
             CPLDebug("GDALVectorTranslate", "Using FID=%s and -preserve_fid", poSrcLayer->GetFIDColumn());
@@ -3022,11 +3022,11 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
         }
 
         if( m_bNativeData &&
-            poSrcLayer->GetMetadataItem("NATIVE_DATA", "NATIVE_DATA") != NULL &&
-            poSrcLayer->GetMetadataItem("NATIVE_MEDIA_TYPE", "NATIVE_DATA") != NULL &&
-            m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST) != NULL &&
-            strstr(m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST), "NATIVE_DATA") != NULL &&
-            strstr(m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST), "NATIVE_MEDIA_TYPE") != NULL )
+            poSrcLayer->GetMetadataItem("NATIVE_DATA", "NATIVE_DATA") != nullptr &&
+            poSrcLayer->GetMetadataItem("NATIVE_MEDIA_TYPE", "NATIVE_DATA") != nullptr &&
+            m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST) != nullptr &&
+            strstr(m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST), "NATIVE_DATA") != nullptr &&
+            strstr(m_poDstDS->GetDriver()->GetMetadataItem(GDAL_DS_LAYER_CREATIONOPTIONLIST), "NATIVE_MEDIA_TYPE") != nullptr )
         {
             papszLCOTemp = CSLSetNameValue(papszLCOTemp, "NATIVE_DATA",
                     poSrcLayer->GetMetadataItem("NATIVE_DATA", "NATIVE_DATA"));
@@ -3035,8 +3035,8 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
             CPLDebug("GDALVectorTranslate", "Transferring layer NATIVE_DATA");
         }
 
-        OGRSpatialReference* poOutputSRSClone = NULL;
-        if( poOutputSRS != NULL )
+        OGRSpatialReference* poOutputSRSClone = nullptr;
+        if( poOutputSRS != nullptr )
         {
             poOutputSRSClone = poOutputSRS->Clone();
         }
@@ -3045,14 +3045,14 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
                                            papszLCOTemp );
         CSLDestroy(papszLCOTemp);
 
-        if( poOutputSRSClone != NULL )
+        if( poOutputSRSClone != nullptr )
         {
             poOutputSRSClone->Release();
         }
 
-        if( poDstLayer == NULL )
+        if( poDstLayer == nullptr )
         {
-            return NULL;
+            return nullptr;
         }
 
         if( m_bCopyMD )
@@ -3090,7 +3090,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
                 int iSrcGeomField = anRequestedGeomFields[i];
                 OGRGeomFieldDefn oGFldDefn
                     (poSrcFDefn->GetGeomFieldDefn(iSrcGeomField));
-                if( m_poOutputSRS != NULL )
+                if( m_poOutputSRS != nullptr )
                 {
                     poOutputSRSClone = m_poOutputSRS->Clone();
                     oGFldDefn.SetSpatialRef(poOutputSRSClone);
@@ -3122,7 +3122,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
         CPLError( CE_Failure, CPLE_AppDefined, "Layer %s already exists, and -append not specified.\n"
                          "        Consider using -append, or -overwrite.",
                 pszNewLayerName );
-        return NULL;
+        return nullptr;
     }
     else
     {
@@ -3153,7 +3153,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
         panMap[iField] = -1;
 
     /* Caution : at the time of writing, the MapInfo driver */
-    /* returns NULL until a field has been added */
+    /* returns nullptr until a field has been added */
     poDstFDefn = poDstLayer->GetLayerDefn();
 
     if (m_papszFieldMap && bAppend)
@@ -3167,7 +3167,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
             CPLError( CE_Failure, CPLE_AppDefined, "Field map should contain the value 'identity' or "
                     "the same number of integer values as the source field count.");
             VSIFree(panMap);
-            return NULL;
+            return nullptr;
         }
 
         for( int iField=0; iField < nSrcFieldCount; iField++)
@@ -3177,7 +3177,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
             {
                 CPLError( CE_Failure, CPLE_AppDefined, "Invalid destination field index %d.", panMap[iField]);
                 VSIFree(panMap);
-                return NULL;
+                return nullptr;
             }
         }
     }
@@ -3186,7 +3186,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
         int  nDstFieldCount = 0;
         if (poDstFDefn)
             nDstFieldCount = poDstFDefn->GetFieldCount();
-        for( int iField=0; m_papszSelFields[iField] != NULL; iField++)
+        for( int iField=0; m_papszSelFields[iField] != nullptr; iField++)
         {
             int iSrcField = poSrcFDefn->GetFieldIndex(m_papszSelFields[iField]);
             if (iSrcField >= 0)
@@ -3212,12 +3212,12 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
                 }
                 else if (poDstLayer->CreateField( &oFieldDefn ) == OGRERR_NONE)
                 {
-                    /* now that we've created a field, GetLayerDefn() won't return NULL */
-                    if (poDstFDefn == NULL)
+                    /* now that we've created a field, GetLayerDefn() won't return nullptr */
+                    if (poDstFDefn == nullptr)
                         poDstFDefn = poDstLayer->GetLayerDefn();
 
                     /* Sanity check : if it fails, the driver is buggy */
-                    if (poDstFDefn != NULL &&
+                    if (poDstFDefn != nullptr &&
                         poDstFDefn->GetFieldCount() != nDstFieldCount + 1)
                     {
                         CPLError(CE_Warning, CPLE_AppDefined,
@@ -3239,15 +3239,15 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
         if (poSrcLayer->TestCapability(OLCIgnoreFields))
         {
             int iSrcField;
-            char** papszIgnoredFields = NULL;
+            char** papszIgnoredFields = nullptr;
             bool bUseIgnoredFields = true;
-            char** papszWHEREUsedFields = NULL;
+            char** papszWHEREUsedFields = nullptr;
 
             if (m_pszWHERE)
             {
                 /* We must not ignore fields used in the -where expression (#4015) */
                 OGRFeatureQuery oFeatureQuery;
-                if ( oFeatureQuery.Compile( poSrcLayer->GetLayerDefn(), m_pszWHERE, FALSE, NULL ) == OGRERR_NONE )
+                if ( oFeatureQuery.Compile( poSrcLayer->GetLayerDefn(), m_pszWHERE, FALSE, nullptr ) == OGRERR_NONE )
                 {
                     papszWHEREUsedFields = oFeatureQuery.GetUsedFields();
                 }
@@ -3262,7 +3262,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
                 const char* pszFieldName =
                     poSrcFDefn->GetFieldDefn(iSrcField)->GetNameRef();
                 bool bFieldRequested = false;
-                for( int iField=0; m_papszSelFields[iField] != NULL; iField++)
+                for( int iField=0; m_papszSelFields[iField] != nullptr; iField++)
                 {
                     if (EQUAL(pszFieldName, m_papszSelFields[iField]))
                     {
@@ -3271,7 +3271,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
                     }
                 }
                 bFieldRequested |= CSLFindString(papszWHEREUsedFields, pszFieldName) >= 0;
-                bFieldRequested |= (m_pszZField != NULL && EQUAL(pszFieldName, m_pszZField));
+                bFieldRequested |= (m_pszZField != nullptr && EQUAL(pszFieldName, m_pszZField));
 
                 /* If source field not requested, add it to ignored files list */
                 if (!bFieldRequested)
@@ -3313,7 +3313,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
             OGRFieldDefn oFieldDefn( poSrcFieldDefn );
 
             // Avoid creating a field with the same name as the FID column
-            if( pszFIDColumn != NULL && EQUAL(pszFIDColumn, oFieldDefn.GetNameRef()) &&
+            if( pszFIDColumn != nullptr && EQUAL(pszFIDColumn, oFieldDefn.GetNameRef()) &&
                 (oFieldDefn.GetType() == OFTInteger || oFieldDefn.GetType() == OFTInteger64) )
             {
                 iSrcFIDField = iField;
@@ -3340,7 +3340,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
             bool bHasRenamed = false;
             /* In case the field name already exists in the target layer, */
             /* build a unique field name */
-            if( poDstFDefn != NULL &&
+            if( poDstFDefn != nullptr &&
                 poDstFDefn->GetFieldIndex(oFieldDefn.GetNameRef()) >= 0 )
             {
                 int nTry = 1;
@@ -3363,12 +3363,12 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
 
             if (poDstLayer->CreateField( &oFieldDefn ) == OGRERR_NONE)
             {
-                /* now that we've created a field, GetLayerDefn() won't return NULL */
-                if (poDstFDefn == NULL)
+                /* now that we've created a field, GetLayerDefn() won't return nullptr */
+                if (poDstFDefn == nullptr)
                     poDstFDefn = poDstLayer->GetLayerDefn();
 
                 /* Sanity check : if it fails, the driver is buggy */
-                if (poDstFDefn != NULL &&
+                if (poDstFDefn != nullptr &&
                     poDstFDefn->GetFieldCount() != nDstFieldCount + 1)
                 {
                     CPLError(CE_Warning, CPLE_AppDefined,
@@ -3377,7 +3377,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
                 }
                 else
                 {
-                    if( bHasRenamed && poDstFDefn != NULL )
+                    if( bHasRenamed && poDstFDefn != nullptr )
                     {
                         const char* pszNewFieldName =
                             poDstFDefn->GetFieldDefn(nDstFieldCount)->GetNameRef();
@@ -3396,11 +3396,11 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
     {
         /* For an existing layer, build the map by fetching the index in the destination */
         /* layer for each source field */
-        if (poDstFDefn == NULL)
+        if (poDstFDefn == nullptr)
         {
-            CPLError( CE_Failure, CPLE_AppDefined, "poDstFDefn == NULL." );
+            CPLError( CE_Failure, CPLE_AppDefined, "poDstFDefn == nullptr." );
             VSIFree(panMap);
-            return NULL;
+            return nullptr;
         }
 
         for( int iField = 0; iField < nSrcFieldCount; iField++ )
@@ -3430,7 +3430,7 @@ TargetLayerInfo* SetupTargetLayer::Setup(OGRLayer* poSrcLayer,
             m_poDstDS->StartTransaction(psOptions->bForceTransaction) == OGRERR_FAILURE )
         {
             VSIFree(panMap);
-            return NULL;
+            return nullptr;
         }
         nTotalEventsDone = 0;
     }
@@ -3486,9 +3486,9 @@ static bool SetupCT( TargetLayerInfo* psInfo,
 /* -------------------------------------------------------------------- */
 /*      Setup coordinate transformation if we need it.                  */
 /* -------------------------------------------------------------------- */
-        OGRSpatialReference* poSourceSRS = NULL;
-        OGRCoordinateTransformation* poCT = NULL;
-        char** papszTransformOptions = NULL;
+        OGRSpatialReference* poSourceSRS = nullptr;
+        OGRCoordinateTransformation* poCT = nullptr;
+        char** papszTransformOptions = nullptr;
 
         int iSrcGeomField;
         if( psInfo->iRequestedSrcGeomField >= 0 )
@@ -3514,7 +3514,7 @@ static bool SetupCT( TargetLayerInfo* psInfo,
             if( psInfo->nFeaturesRead == 0 )
             {
                 poSourceSRS = poUserSourceSRS;
-                if( poSourceSRS == NULL )
+                if( poSourceSRS == nullptr )
                 {
                     if( iSrcGeomField > 0 )
                         poSourceSRS = poSrcLayer->GetLayerDefn()->
@@ -3523,7 +3523,7 @@ static bool SetupCT( TargetLayerInfo* psInfo,
                         poSourceSRS = poSrcLayer->GetSpatialRef();
                 }
             }
-            if( poSourceSRS == NULL )
+            if( poSourceSRS == nullptr )
             {
                 OGRGeometry* poSrcGeometry =
                     poFeature->GetGeomFieldRef(iSrcGeomField);
@@ -3535,7 +3535,7 @@ static bool SetupCT( TargetLayerInfo* psInfo,
 
         if( bTransform )
         {
-            if( poSourceSRS == NULL )
+            if( poSourceSRS == nullptr )
             {
                 CPLError( CE_Failure, CPLE_AppDefined, "Can't transform coordinates, source layer has no\n"
                         "coordinate system.  Use -s_srs to set one." );
@@ -3543,10 +3543,10 @@ static bool SetupCT( TargetLayerInfo* psInfo,
                 return false;
             }
 
-            CPLAssert( NULL != poSourceSRS );
-            CPLAssert( NULL != poOutputSRS );
+            CPLAssert( nullptr != poSourceSRS );
+            CPLAssert( nullptr != poOutputSRS );
 
-            if( psInfo->papoCT[iGeom] != NULL &&
+            if( psInfo->papoCT[iGeom] != nullptr &&
                 psInfo->papoCT[iGeom]->GetSourceCS() == poSourceSRS )
             {
                 poCT = psInfo->papoCT[iGeom];
@@ -3554,9 +3554,9 @@ static bool SetupCT( TargetLayerInfo* psInfo,
             else
             {
                 poCT = OGRCreateCoordinateTransformation( poSourceSRS, poOutputSRS );
-                if( poCT == NULL )
+                if( poCT == nullptr )
                 {
-                    char        *pszWKT = NULL;
+                    char        *pszWKT = nullptr;
 
                     CPLError( CE_Failure, CPLE_AppDefined, "Failed to create coordinate transformation between the\n"
                         "following coordinate systems.  This may be because they\n"
@@ -3573,7 +3573,7 @@ static bool SetupCT( TargetLayerInfo* psInfo,
 
                     return false;
                 }
-                if( poGCPCoordTrans != NULL )
+                if( poGCPCoordTrans != nullptr )
                     poCT = new CompositeCT( poGCPCoordTrans, poCT );
             }
 
@@ -3590,7 +3590,7 @@ static bool SetupCT( TargetLayerInfo* psInfo,
 
         if (bWrapDateline)
         {
-            if (bTransform && poCT != NULL && poOutputSRS != NULL && poOutputSRS->IsGeographic())
+            if (bTransform && poCT != nullptr && poOutputSRS != nullptr && poOutputSRS->IsGeographic())
             {
                 papszTransformOptions =
                     CSLAddString(papszTransformOptions, "WRAPDATELINE=YES");
@@ -3602,7 +3602,7 @@ static bool SetupCT( TargetLayerInfo* psInfo,
                         CSLAddString(papszTransformOptions, soOffset);
                 }
             }
-            else if (poSourceSRS != NULL && poSourceSRS->IsGeographic())
+            else if (poSourceSRS != nullptr && poSourceSRS->IsGeographic())
             {
                 papszTransformOptions =
                     CSLAddString(papszTransformOptions, "WRAPDATELINE=YES");
@@ -3629,6 +3629,186 @@ static bool SetupCT( TargetLayerInfo* psInfo,
     return true;
 }
 
+static OGRGeometry* CutGeometry(TargetLayerInfo* psInfo,
+                                const int eGType,
+                                GIntBig nFid,
+                                OGRGeometry* poGeometry,
+                                GEOSContextHandle_t geosContext,
+                                const GEOSPreparedGeometry* geosCutGeomPrep,
+                                GEOSGeom geosCutGeom,
+                                bool bFixGeom,
+                                CPLMutex* hMutex)
+{
+    char result = 0;
+    GEOSGeom dstGeom = poGeometry->exportToGEOS(geosContext);
+    bool wasInvalid = false;
+
+    if(nullptr != dstGeom) {
+        // Check if valid
+        if(GEOSisValid_r(geosContext, dstGeom) != 1) {
+            // Check if geometry envelope is completelly outside of cut geometry
+            // and if yes - skip it.
+            OGREnvelope env;
+            poGeometry->getEnvelope(&env);
+
+            GEOSCoordSequence *poSeq = GEOSCoordSeq_create_r(geosContext, 5, 2);
+            GEOSCoordSeq_setX_r(geosContext, poSeq, 0, env.MinX);
+            GEOSCoordSeq_setY_r(geosContext, poSeq, 0, env.MinY);
+            GEOSCoordSeq_setX_r(geosContext, poSeq, 1, env.MinX);
+            GEOSCoordSeq_setY_r(geosContext, poSeq, 1, env.MaxY);
+            GEOSCoordSeq_setX_r(geosContext, poSeq, 2, env.MaxX);
+            GEOSCoordSeq_setY_r(geosContext, poSeq, 2, env.MaxY);
+            GEOSCoordSeq_setX_r(geosContext, poSeq, 3, env.MaxX);
+            GEOSCoordSeq_setY_r(geosContext, poSeq, 3, env.MinY);
+            GEOSCoordSeq_setX_r(geosContext, poSeq, 4, env.MinX);
+            GEOSCoordSeq_setY_r(geosContext, poSeq, 4, env.MinY);
+
+            GEOSGeometry *poGeosRing = GEOSGeom_createLinearRing_r(geosContext,
+                                                                   poSeq);
+            GEOSGeometry *poEnvelopePolygon =
+                    GEOSGeom_createPolygon_r(geosContext, poGeosRing, nullptr, 0);
+
+            CPLMutexHolder holder(hMutex, 10.5);
+
+            result = GEOSPreparedIntersects_r(geosContext, geosCutGeomPrep,
+                                              poEnvelopePolygon);
+            GEOSGeom_destroy_r(geosContext, poEnvelopePolygon);
+
+            if(result != 1)
+            {
+                // In this case the geometry envelope not intersects with cut geometry
+                delete poGeometry;
+                psInfo->nFeaturesSkipClip++;
+                GEOSGeom_destroy_r(geosContext, dstGeom);
+                return nullptr;
+            }
+
+            if(bFixGeom) {
+                dstGeom = MakeValid(geosContext, dstGeom,
+                                    static_cast<OGRwkbGeometryType>(eGType));
+                wasInvalid = true;
+            }
+            else {
+                delete poGeometry;
+                psInfo->nFeaturesSkipClip++;
+                GEOSGeom_destroy_r(geosContext, dstGeom);
+                return nullptr;
+            }
+        }
+
+        // Check if geom within cut geom
+        if(nullptr != dstGeom) {
+            CPLMutexHolder holder(hMutex, 10.5);
+            result = GEOSPreparedContains_r(geosContext,
+                                            geosCutGeomPrep,
+                                            dstGeom);
+        }
+    }
+    else {
+        OGREnvelope env;
+        poGeometry->getEnvelope(&env);
+
+        GEOSCoordSequence *poSeq = GEOSCoordSeq_create_r(geosContext, 5, 2);
+        GEOSCoordSeq_setX_r(geosContext, poSeq, 0, env.MinX);
+        GEOSCoordSeq_setY_r(geosContext, poSeq, 0, env.MinY);
+        GEOSCoordSeq_setX_r(geosContext, poSeq, 1, env.MinX);
+        GEOSCoordSeq_setY_r(geosContext, poSeq, 1, env.MaxY);
+        GEOSCoordSeq_setX_r(geosContext, poSeq, 2, env.MaxX);
+        GEOSCoordSeq_setY_r(geosContext, poSeq, 2, env.MaxY);
+        GEOSCoordSeq_setX_r(geosContext, poSeq, 3, env.MaxX);
+        GEOSCoordSeq_setY_r(geosContext, poSeq, 3, env.MinY);
+        GEOSCoordSeq_setX_r(geosContext, poSeq, 4, env.MinX);
+        GEOSCoordSeq_setY_r(geosContext, poSeq, 4, env.MinY);
+
+        GEOSGeometry *poGeosRing = GEOSGeom_createLinearRing_r(geosContext,
+                                                               poSeq);
+        GEOSGeometry *poEnvelopePolygon =
+                GEOSGeom_createPolygon_r(geosContext, poGeosRing, nullptr, 0);
+
+        CPLMutexHolder holder(hMutex, 10.5);
+
+        result = GEOSPreparedIntersects_r(geosContext, geosCutGeomPrep,
+                                          poEnvelopePolygon);
+        GEOSGeom_destroy_r(geosContext, poEnvelopePolygon);
+
+        if(result == 1)
+        {
+            CPLError( CE_Warning, CPLE_AppDefined,
+                      "Failed to exportToGEOS feature " CPL_FRMT_GIB
+                      " (geometry probably is invalid).",
+                      nFid );
+            psInfo->nFeaturesInsideClip++;
+            return poGeometry;
+        }
+
+//        CPLError( CE_Failure, CPLE_AppDefined,
+//                  "Failed to exportToGEOS feature " CPL_FRMT_GIB
+//                  " (geometry probably is invalid).",
+//                  nFid );
+//        psInfo->nFeaturesInsideClip++;
+
+        delete poGeometry;
+        psInfo->nFeaturesSkipClip++;
+        return nullptr;
+    }
+
+    if(nullptr != dstGeom) {
+        if(result != 1) {
+            // Check intersection
+            {
+                CPLMutexHolder holder(hMutex, 10.5);
+                result = GEOSPreparedIntersects_r(geosContext,
+                                                  geosCutGeomPrep,
+                                                  dstGeom);
+            }
+
+            if(result == 1) {
+                GEOSGeom cutGeom = GEOSIntersection_r(geosContext,
+                                                      geosCutGeom,
+                                                      dstGeom);
+                OGRGeometry* poClipped = nullptr;
+                if(nullptr != cutGeom) {
+                    poClipped =
+                            OGRGeometryFactory::createFromGEOS(geosContext,
+                                                               cutGeom);
+                }
+
+                CPLMutexHolder holder(hMutex, 10.5);
+                GEOSGeom_destroy_r(geosContext, cutGeom);
+
+                delete poGeometry;
+                if (poClipped == nullptr || poClipped->IsEmpty())
+                {
+                    delete poClipped;
+                    psInfo->nFeaturesSkipClip++;
+                    GEOSGeom_destroy_r(geosContext, dstGeom);
+                    return nullptr;
+                }
+                poGeometry = poClipped;
+                psInfo->nFeaturesClipped++;
+            }
+            else {
+                delete poGeometry;
+                psInfo->nFeaturesOutOfClip++;
+                CPLMutexHolder holder(hMutex, 10.5);
+                GEOSGeom_destroy_r(geosContext, dstGeom);
+                return nullptr;
+            }
+        }
+        else if(wasInvalid && nullptr != dstGeom) {
+            delete poGeometry;
+            poGeometry = OGRGeometryFactory::createFromGEOS(geosContext, dstGeom);
+            psInfo->nFeaturesInsideClip++;
+        }
+        else {
+            psInfo->nFeaturesInsideClip++;
+        }
+        CPLMutexHolder holder(hMutex, 10.5);
+        GEOSGeom_destroy_r(geosContext, dstGeom);
+    }
+    return poGeometry;
+}
+
 static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeature,
                            TargetLayerInfo* psInfo,
                            OGRSpatialReference* poOutputSRS,
@@ -3644,7 +3824,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                            bool bFixGeom,
                            CPLMutex* hMutex)
 {
-    OGRFeature *poDstFeature = NULL;
+    OGRFeature *poDstFeature = nullptr;
     int* const panMap = psInfo->panMap;
     const int iSrcZField = psInfo->iSrcZField;
     const bool bPreserveFID = psInfo->bPreserveFID;
@@ -3708,7 +3888,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
 
         /* Optimization to avoid duplicating the source geometry in the */
         /* target feature : we steal it from the source feature for now... */
-        OGRGeometry* poStolenGeometry = NULL;
+        OGRGeometry* poStolenGeometry = nullptr;
         if( !bExplodeCollections && nSrcGeomFieldCount == 1 &&
             nDstGeomFieldCount == 1 )
         {
@@ -3762,14 +3942,14 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
         /* Erase native data if asked explicitly */
         if( !layerTranslator->m_bNativeData )
         {
-            poDstFeature->SetNativeData(NULL);
-            poDstFeature->SetNativeMediaType(NULL);
+            poDstFeature->SetNativeData(nullptr);
+            poDstFeature->SetNativeMediaType(nullptr);
         }
 
         for( int iGeom = 0; iGeom < nDstGeomFieldCount; iGeom ++ )
         {
             OGRGeometry* poDstGeometry = poDstFeature->StealGeometry(iGeom);
-            if (poDstGeometry == NULL)
+            if (poDstGeometry == nullptr)
                 continue;
 
             if (nParts > 0)
@@ -3829,97 +4009,14 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
             }
 
             if (layerTranslator->m_poClipSrc)
-            {                
-                char result = 0;
-                GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
-                bool wasInvalid = false;
-
-                if(nullptr != dstGeom) {
-                    // Check if valid
-                    if(GEOSisValid_r(geosContext, dstGeom) == 0) {
-                        if(bFixGeom) {
-                            dstGeom = MakeValid(geosContext, dstGeom,
-                                                static_cast<OGRwkbGeometryType>(eGType));
-                            wasInvalid = true;
-                        }
-                        else {
-                            delete poDstGeometry;
-                            psInfo->nFeaturesSkipClip++;
-                            GEOSGeom_destroy_r(geosContext, dstGeom);
-                            goto end_loop;
-                        }
-                    }
-
-                    // Check if geom within cut geom
-                    if(nullptr != dstGeom) {
-                        CPLMutexHolder holder(hMutex, 10.5);
-                        result = GEOSPreparedContains_r(geosContext,
-                                                        cutGeomPrepSrc,
-                                                        dstGeom);
-                    }
-                }
-                else {
-                    CPLError( CE_Failure, CPLE_AppDefined,
-                              "Failed to exportToGEOS feature " CPL_FRMT_GIB
-                              " (geometry probably is invalid).",
-                              poFeature->GetFID() );
-
-                    psInfo->nFeaturesInsideClip++;
-                }
-
-                if(nullptr != dstGeom) {
-                    if(result != 1) {
-                        // Check intersection
-                        {
-                            CPLMutexHolder holder(hMutex, 10.5);
-                            result = GEOSPreparedIntersects_r(geosContext,
-                                                              cutGeomPrepSrc,
-                                                              dstGeom);
-                        }
-
-                        if(result == 1) {
-                            GEOSGeom cutGeom = GEOSIntersection_r(geosContext,
-                                                                  cutGeomSrc,
-                                                                  dstGeom);
-                            OGRGeometry* poClipped = nullptr;
-                            if(nullptr != cutGeom) {
-                                poClipped =
-                                        OGRGeometryFactory::createFromGEOS(geosContext,
-                                                                           cutGeom);
-                            }
-
-                            CPLMutexHolder holder(hMutex, 10.5);
-                            GEOSGeom_destroy_r(geosContext, cutGeom);
-
-                            delete poDstGeometry;
-                            if (poClipped == NULL || poClipped->IsEmpty())
-                            {
-                                delete poClipped;
-                                psInfo->nFeaturesSkipClip++;
-                                GEOSGeom_destroy_r(geosContext, dstGeom);
-                                goto end_loop;
-                            }
-                            poDstGeometry = poClipped;
-                            psInfo->nFeaturesClipped++;
-                        }
-                        else {
-                            delete poDstGeometry;
-                            psInfo->nFeaturesOutOfClip++;
-                            CPLMutexHolder holder(hMutex, 10.5);
-                            GEOSGeom_destroy_r(geosContext, dstGeom);
-                            goto end_loop;
-                        }
-                    }
-                    else if(wasInvalid && nullptr != dstGeom) {
-                        delete poDstGeometry;
-                        poDstGeometry = OGRGeometryFactory::createFromGEOS(geosContext, dstGeom);
-                        psInfo->nFeaturesInsideClip++;
-                    }
-                    else {
-                        psInfo->nFeaturesInsideClip++;
-                    }
-                    CPLMutexHolder holder(hMutex, 10.5);
-                    GEOSGeom_destroy_r(geosContext, dstGeom);
+            {
+                poDstGeometry = CutGeometry(psInfo, eGType, poFeature->GetFID(),
+                                            poDstGeometry, geosContext,
+                                            cutGeomPrepSrc, cutGeomSrc, bFixGeom,
+                                            hMutex);
+                if(nullptr == poDstGeometry)
+                {
+                    goto end_loop;
                 }
             }
 
@@ -3928,11 +4025,11 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                 poCT = layerTranslator->m_poGCPCoordTrans;
             char** papszTransformOptions = psInfo->papapszTransformOptions[iGeom];
 
-            if( poCT != NULL || papszTransformOptions != NULL)
+            if( poCT != nullptr || papszTransformOptions != nullptr)
             {
                 OGRGeometry* poReprojectedGeom =
                     OGRGeometryFactory::transformWithOptions(poDstGeometry, poCT, papszTransformOptions);
-                if( poReprojectedGeom == NULL )
+                if( poReprojectedGeom == nullptr )
                 {
                     if( psOptions->nGroupTransactions )
                     {
@@ -3963,89 +4060,23 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                 delete poDstGeometry;
                 poDstGeometry = poReprojectedGeom;
             }
-            else if (poOutputSRS != NULL)
+            else if (poOutputSRS != nullptr)
             {
                 poDstGeometry->assignSpatialReference(poOutputSRS);
             }
 
             if (layerTranslator->m_poClipDst)
             {
-                if( poDstGeometry == NULL )
+                if(nullptr == poDstGeometry)
                     goto end_loop;
 
-                char result = 0;
-                bool wasInvalid = false;
-                GEOSGeom dstGeom = poDstGeometry->exportToGEOS(geosContext);
-
-                if(nullptr != dstGeom) {
-                    if(GEOSisValid_r(geosContext, dstGeom) == 0) {
-                        if(bFixGeom) {
-                            dstGeom = MakeValid(geosContext, dstGeom, static_cast<OGRwkbGeometryType>(eGType));
-                            wasInvalid = true;
-                        }
-                        else {
-                            delete poDstGeometry;
-                            psInfo->nFeaturesSkipClip++;
-                            GEOSGeom_destroy_r(geosContext, dstGeom);
-                            goto end_loop;
-                        }
-                    }
-
-                    if(nullptr != dstGeom) {
-                        CPLMutexHolder holder(hMutex, 15);
-                        result = GEOSPreparedContains_r(geosContext, cutGeomPrepDst, dstGeom);
-                    }
-                }
-                else {
-                    CPLError( CE_Failure, CPLE_AppDefined, "Failed to exportToGEOS feature " CPL_FRMT_GIB " (geometry probably is invalid).",
-                              poFeature->GetFID() );
-                    psInfo->nFeaturesInsideClip++;
-                }
-
-                if(nullptr != dstGeom) {
-                    if(result != 1) {
-                        {
-                            CPLMutexHolder holder(hMutex, 10.5);
-                            result = GEOSPreparedIntersects_r(geosContext,
-                                                              cutGeomPrepDst,
-                                                              dstGeom);
-                        }
-                        if(result == 1) {
-                            GEOSGeom cutGeom = GEOSIntersection_r(geosContext,
-                                                                  cutGeomDst, dstGeom);
-                            OGRGeometry* poClipped = nullptr;
-                            if(nullptr != cutGeom) {
-                                poClipped =
-                                        OGRGeometryFactory::createFromGEOS(geosContext,
-                                                                           cutGeom);
-                            }
-
-                            CPLMutexHolder holder(hMutex, 10.5);
-                            GEOSGeom_destroy_r(geosContext, cutGeom);
-                            delete poDstGeometry;
-                            if (poClipped == NULL || poClipped->IsEmpty())
-                            {
-                                delete poClipped;
-                                GEOSGeom_destroy_r(geosContext, dstGeom);
-                                goto end_loop;
-                            }
-
-                            poDstGeometry = poClipped;
-                        }
-                        else {
-                            delete poDstGeometry;
-                            psInfo->nFeaturesOutOfClip++;
-                            CPLMutexHolder holder(hMutex, 10.5);
-                            GEOSGeom_destroy_r(geosContext, dstGeom);
-                            goto end_loop;
-                        }
-                    }
-                    else if(wasInvalid && nullptr != dstGeom) {
-                        delete poDstGeometry;
-                        poDstGeometry = OGRGeometryFactory::createFromGEOS(geosContext, dstGeom);
-                    }
-                    CPLMutexHolder holder(hMutex, 10.5);
-                    GEOSGeom_destroy_r(geosContext, dstGeom);
+                poDstGeometry = CutGeometry(psInfo, eGType, poFeature->GetFID(),
+                                            poDstGeometry, geosContext,
+                                            cutGeomPrepDst, cutGeomDst, bFixGeom,
+                                            hMutex);
+                if(nullptr == poDstGeometry)
+                {
+                    goto end_loop;
                 }
             }
 
@@ -4058,7 +4089,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                      layerTranslator->m_eGeomTypeConversion == GTC_CONVERT_TO_LINEAR ||
                      layerTranslator->m_eGeomTypeConversion == GTC_CONVERT_TO_CURVE )
             {
-                if( poDstGeometry != NULL )
+                if( poDstGeometry != nullptr )
                 {
                     OGRwkbGeometryType eTargetType = poDstGeometry->getGeometryType();
                     eTargetType = ConvertType(layerTranslator->m_eGeomTypeConversion, eTargetType);
@@ -4204,7 +4235,7 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
 
     // Setup thread pool.
     int nThreads = CPLGetNumCPUs() - 1;
-    const char* pszNumThreads = CPLGetConfigOption("GDAL_NUM_THREADS", NULL);
+    const char* pszNumThreads = CPLGetConfigOption("GDAL_NUM_THREADS", nullptr);
     if( pszNumThreads )
     {
         if( EQUAL(pszNumThreads, "ALL_CPUS") )
@@ -4256,7 +4287,7 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
 //    const int nDstGeomFieldCount = poDstLayer->GetLayerDefn()->GetGeomFieldCount();
 //    const bool bExplodeCollections = m_bExplodeCollections && nDstGeomFieldCount <= 1;
 
-    if( poOutputSRS == NULL && !m_bNullifyOutputSRS )
+    if( poOutputSRS == nullptr && !m_bNullifyOutputSRS )
     {
         if( nSrcGeomFieldCount == 1 )
         {
@@ -4289,7 +4320,7 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
     bool bRet = true;
     while( true )
     {
-        if( poFeatureIn != NULL )
+        if( poFeatureIn != nullptr )
             poFeature = poFeatureIn;
         else if( psOptions->nFIDToFetch != OGRNullFID )
             poFeature = poSrcLayer->GetFeature(psOptions->nFIDToFetch);
@@ -4298,7 +4329,7 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
         if( m_nLimit >= 0 && psInfo->nFeaturesRead >= m_nLimit )
             break;
 
-        if( poFeature == NULL )
+        if( poFeature == nullptr )
             break;
 
         if( psInfo->nFeaturesRead == 0 || psInfo->bPerFeatureCT )
@@ -4359,7 +4390,7 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
 
         if( psOptions->nFIDToFetch != OGRNullFID )
             break;
-        if( poFeatureIn != NULL )
+        if( poFeatureIn != nullptr )
             break;
     }
 
@@ -4391,7 +4422,7 @@ int LayerTranslator::Translate( OGRFeature* poFeatureIn,
         }
     }
 
-    if( poFeatureIn == NULL )
+    if( poFeatureIn == nullptr )
     {
         CPLDebug("GDALVectorTranslate", CPL_FRMT_GIB " features written in layer '%s'",
                 nFeaturesWritten, poDstLayer->GetName());
@@ -4420,9 +4451,9 @@ static void RemoveBOM(GByte* pabyData)
 /**
  * allocates a GDALVectorTranslateOptions struct.
  *
- * @param papszArgv NULL terminated list of options (potentially including filename and open options too), or NULL.
+ * @param papszArgv nullptr terminated list of options (potentially including filename and open options too), or nullptr.
  *                  The accepted options are the ones of the <a href="ogr2ogr.html">ogr2ogr</a> utility.
- * @param psOptionsForBinary (output) may be NULL (and should generally be NULL),
+ * @param psOptionsForBinary (output) may be nullptr (and should generally be nullptr),
  *                           otherwise (gdal_translate_bin.cpp use case) must be allocated with
  *                           GDALVectorTranslateOptionsForBinaryNew() prior to this function. Will be
  *                           filled with potentially present filename, open options,...
@@ -4444,65 +4475,65 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
     psOptions->nFIDToFetch = OGRNullFID;
     psOptions->bQuiet = false;
     psOptions->pszFormat = CPLStrdup("ESRI Shapefile");
-    psOptions->papszLayers = NULL;
-    psOptions->papszDSCO = NULL;
-    psOptions->papszLCO = NULL;
+    psOptions->papszLayers = nullptr;
+    psOptions->papszDSCO = nullptr;
+    psOptions->papszLCO = nullptr;
     psOptions->bTransform = false;
     psOptions->bAddMissingFields = false;
-    psOptions->pszOutputSRSDef = NULL;
-    psOptions->pszSourceSRSDef = NULL;
+    psOptions->pszOutputSRSDef = nullptr;
+    psOptions->pszSourceSRSDef = nullptr;
     psOptions->bNullifyOutputSRS = false;
     psOptions->bExactFieldNameMatch = true;
-    psOptions->pszNewLayerName = NULL;
-    psOptions->pszWHERE = NULL;
-    psOptions->pszGeomField = NULL;
-    psOptions->papszSelFields = NULL;
-    psOptions->pszSQLStatement = NULL;
-    psOptions->pszDialect = NULL;
+    psOptions->pszNewLayerName = nullptr;
+    psOptions->pszWHERE = nullptr;
+    psOptions->pszGeomField = nullptr;
+    psOptions->papszSelFields = nullptr;
+    psOptions->pszSQLStatement = nullptr;
+    psOptions->pszDialect = nullptr;
     psOptions->eGType = GEOMTYPE_UNCHANGED;
     psOptions->eGeomTypeConversion = GTC_DEFAULT;
     psOptions->eGeomOp = GEOMOP_NONE;
     psOptions->dfGeomOpParam = 0;
-    psOptions->papszFieldTypesToString = NULL;
-    psOptions->papszMapFieldType = NULL;
+    psOptions->papszFieldTypesToString = nullptr;
+    psOptions->papszMapFieldType = nullptr;
     psOptions->bUnsetFieldWidth = false;
     psOptions->bDisplayProgress = false;
     psOptions->bWrapDateline = false;
     psOptions->dfDateLineOffset = 10.0;
     psOptions->bClipSrc = false;
-    psOptions->hClipSrc = NULL;
-    psOptions->pszClipSrcDS = NULL;
-    psOptions->pszClipSrcSQL = NULL;
-    psOptions->pszClipSrcLayer = NULL;
-    psOptions->pszClipSrcWhere = NULL;
-    psOptions->hClipDst = NULL;
-    psOptions->pszClipDstDS = NULL;
-    psOptions->pszClipDstSQL = NULL;
-    psOptions->pszClipDstLayer = NULL;
-    psOptions->pszClipDstWhere = NULL;
+    psOptions->hClipSrc = nullptr;
+    psOptions->pszClipSrcDS = nullptr;
+    psOptions->pszClipSrcSQL = nullptr;
+    psOptions->pszClipSrcLayer = nullptr;
+    psOptions->pszClipSrcWhere = nullptr;
+    psOptions->hClipDst = nullptr;
+    psOptions->pszClipDstDS = nullptr;
+    psOptions->pszClipDstSQL = nullptr;
+    psOptions->pszClipDstLayer = nullptr;
+    psOptions->pszClipDstWhere = nullptr;
     psOptions->bSplitListFields = false;
     psOptions->nMaxSplitListSubFields = -1;
     psOptions->bExplodeCollections = false;
-    psOptions->pszZField = NULL;
-    psOptions->papszFieldMap = NULL;
+    psOptions->pszZField = nullptr;
+    psOptions->papszFieldMap = nullptr;
     psOptions->nCoordDim = COORD_DIM_UNCHANGED;
-    psOptions->papszDestOpenOptions = NULL;
+    psOptions->papszDestOpenOptions = nullptr;
     psOptions->bForceNullable = false;
     psOptions->bUnsetDefault = false;
     psOptions->bUnsetFid = false;
     psOptions->bPreserveFID = false;
     psOptions->bCopyMD = true;
-    psOptions->papszMetadataOptions = NULL;
-    psOptions->pszSpatSRSDef = NULL;
+    psOptions->papszMetadataOptions = nullptr;
+    psOptions->pszSpatSRSDef = nullptr;
     psOptions->nGCPCount = 0;
-    psOptions->pasGCPs = NULL;
+    psOptions->pasGCPs = nullptr;
     psOptions->nTransformOrder = 0;  /* Default to 0 for now... let the lib decide */
-    psOptions->hSpatialFilter = NULL;
+    psOptions->hSpatialFilter = nullptr;
     psOptions->bNativeData = true;
     psOptions->nLimit = -1;
 
     int nArgc = CSLCount(papszArgv);
-    for( int i = 0; papszArgv != NULL && i < nArgc; i++ )
+    for( int i = 0; papszArgv != nullptr && i < nArgc; i++ )
     {
         if( EQUAL(papszArgv[i],"-q") || EQUAL(papszArgv[i],"-quiet") )
         {
@@ -4584,9 +4615,9 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
         {
             i++;
             CPLFree(psOptions->pszSQLStatement);
-            GByte* pabyRet = NULL;
+            GByte* pabyRet = nullptr;
             if( papszArgv[i][0] == '@' &&
-                VSIIngestFile( NULL, papszArgv[i] + 1, &pabyRet, NULL, 1024*1024) )
+                VSIIngestFile( nullptr, papszArgv[i] + 1, &pabyRet, nullptr, 1024*1024) )
             {
                 RemoveBOM(pabyRet);
                 psOptions->pszSQLStatement = (char*)pabyRet;
@@ -4641,7 +4672,7 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
                              "-nlt %s: type not recognised.",
                             papszArgv[i+1] );
                     GDALVectorTranslateOptionsFree(psOptions);
-                    return NULL;
+                    return nullptr;
                 }
             }
             if (psOptions->eGType != GEOMTYPE_UNCHANGED && psOptions->eGType != wkbNone && bIs3D)
@@ -4666,7 +4697,7 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
                 CPLError(CE_Failure, CPLE_IllegalArg,"-dim %s: value not handled.",
                          papszArgv[i+1] );
                 GDALVectorTranslateOptionsFree(psOptions);
-                return NULL;
+                return nullptr;
             }
             i++;
         }
@@ -4703,10 +4734,10 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
         {
             CPLFree(psOptions->pszOutputSRSDef);
             psOptions->pszOutputSRSDef = CPLStrdup(papszArgv[++i]);
-            if (EQUAL(psOptions->pszOutputSRSDef, "NULL") ||
+            if (EQUAL(psOptions->pszOutputSRSDef, "nullptr") ||
                 EQUAL(psOptions->pszOutputSRSDef, "NONE"))
             {
-                psOptions->pszOutputSRSDef = NULL;
+                psOptions->pszOutputSRSDef = nullptr;
                 psOptions->bNullifyOutputSRS = true;
             }
         }
@@ -4746,9 +4777,9 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
         {
             i++;
             CPLFree(psOptions->pszWHERE);
-            GByte* pabyRet = NULL;
+            GByte* pabyRet = nullptr;
             if( papszArgv[i][0] == '@' &&
-                VSIIngestFile( NULL, papszArgv[i] + 1, &pabyRet, NULL, 1024*1024) )
+                VSIIngestFile( nullptr, papszArgv[i] + 1, &pabyRet, nullptr, 1024*1024) )
             {
                 RemoveBOM(pabyRet);
                 psOptions->pszWHERE = (char*)pabyRet;
@@ -4791,7 +4822,7 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
                 else if (EQUAL(*iter, "All"))
                 {
                     CSLDestroy(psOptions->papszFieldTypesToString);
-                    psOptions->papszFieldTypesToString = NULL;
+                    psOptions->papszFieldTypesToString = nullptr;
                     psOptions->papszFieldTypesToString = CSLAddString(psOptions->papszFieldTypesToString, "All");
                     break;
                 }
@@ -4801,7 +4832,7 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
                              "Unhandled type for fieldTypeToString option : %s",
                             *iter);
                     GDALVectorTranslateOptionsFree(psOptions);
-                    return NULL;
+                    return nullptr;
                 }
                 iter ++;
             }
@@ -4815,7 +4846,7 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
             char** iter = psOptions->papszMapFieldType;
             while(*iter)
             {
-                char* pszKey = NULL;
+                char* pszKey = nullptr;
                 const char* pszValue = CPLParseNameValue(*iter, &pszKey);
                 if( pszKey && pszValue)
                 {
@@ -4826,7 +4857,7 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
                                 *iter);
                         CPLFree(pszKey);
                         GDALVectorTranslateOptionsFree(psOptions);
-                        return NULL;
+                        return nullptr;
                     }
                 }
                 CPLFree(pszKey);
@@ -4855,15 +4886,15 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
             {
                 CPLError(CE_Failure, CPLE_IllegalArg, "%s option requires 1 or 4 arguments", papszArgv[i]);
                 GDALVectorTranslateOptionsFree(psOptions);
-                return NULL;
+                return nullptr;
             }
 
             VSIStatBufL  sStat;
             psOptions->bClipSrc = true;
             if ( IsNumber(papszArgv[i+1])
-                 && papszArgv[i+2] != NULL
-                 && papszArgv[i+3] != NULL
-                 && papszArgv[i+4] != NULL)
+                 && papszArgv[i+2] != nullptr
+                 && papszArgv[i+3] != nullptr
+                 && papszArgv[i+4] != nullptr)
             {
                 OGRLinearRing  oRing;
 
@@ -4884,13 +4915,13 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
             {
                 char* pszTmp = (char*) papszArgv[i+1];
                 OGR_G_DestroyGeometry(psOptions->hClipSrc);
-                OGRGeometryFactory::createFromWkt(&pszTmp, NULL, (OGRGeometry **)&psOptions->hClipSrc);
-                if (psOptions->hClipSrc == NULL)
+                OGRGeometryFactory::createFromWkt(&pszTmp, nullptr, (OGRGeometry **)&psOptions->hClipSrc);
+                if (psOptions->hClipSrc == nullptr)
                 {
                     CPLError(CE_Failure, CPLE_IllegalArg,
                              "Invalid geometry. Must be a valid POLYGON or MULTIPOLYGON WKT");
                     GDALVectorTranslateOptionsFree(psOptions);
-                    return NULL;
+                    return nullptr;
                 }
                 i ++;
             }
@@ -4929,14 +4960,14 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
             {
                 CPLError(CE_Failure, CPLE_IllegalArg, "%s option requires 1 or 4 arguments", papszArgv[i]);
                 GDALVectorTranslateOptionsFree(psOptions);
-                return NULL;
+                return nullptr;
             }
 
             VSIStatBufL  sStat;
             if ( IsNumber(papszArgv[i+1])
-                 && papszArgv[i+2] != NULL
-                 && papszArgv[i+3] != NULL
-                 && papszArgv[i+4] != NULL)
+                 && papszArgv[i+2] != nullptr
+                 && papszArgv[i+3] != nullptr
+                 && papszArgv[i+4] != nullptr)
             {
                 OGRLinearRing  oRing;
 
@@ -4957,13 +4988,13 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
             {
                 char* pszTmp = (char*) papszArgv[i+1];
                 OGR_G_DestroyGeometry(psOptions->hClipDst);
-                OGRGeometryFactory::createFromWkt(&pszTmp, NULL, (OGRGeometry **)&psOptions->hClipDst);
-                if (psOptions->hClipDst == NULL)
+                OGRGeometryFactory::createFromWkt(&pszTmp, nullptr, (OGRGeometry **)&psOptions->hClipDst);
+                if (psOptions->hClipDst == nullptr)
                 {
                     CPLError(CE_Failure, CPLE_IllegalArg,
                              "Invalid geometry. Must be a valid POLYGON or MULTIPOLYGON WKT");
                     GDALVectorTranslateOptionsFree(psOptions);
-                    return NULL;
+                    return nullptr;
                 }
                 i ++;
             }
@@ -5020,7 +5051,7 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
         }
         else if( i+4 < nArgc && EQUAL(papszArgv[i],"-gcp") )
         {
-            char* endptr = NULL;
+            char* endptr = nullptr;
             /* -gcp pixel line easting northing [elev] */
 
             psOptions->nGCPCount++;
@@ -5032,7 +5063,7 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
             psOptions->pasGCPs[psOptions->nGCPCount-1].dfGCPLine = CPLAtof(papszArgv[++i]);
             psOptions->pasGCPs[psOptions->nGCPCount-1].dfGCPX = CPLAtof(papszArgv[++i]);
             psOptions->pasGCPs[psOptions->nGCPCount-1].dfGCPY = CPLAtof(papszArgv[++i]);
-            if( papszArgv[i+1] != NULL
+            if( papszArgv[i+1] != nullptr
                 && (CPLStrtod(papszArgv[i+1], &endptr) != 0.0 || papszArgv[i+1][0] == '0') )
             {
                 /* Check that last argument is really a number and not a filename */
@@ -5091,11 +5122,11 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
             CPLError(CE_Failure, CPLE_NotSupported,
                      "Unknown option name '%s'", papszArgv[i]);
             GDALVectorTranslateOptionsFree(psOptions);
-            return NULL;
+            return nullptr;
         }
-        else if( psOptionsForBinary && psOptionsForBinary->pszDestDataSource == NULL )
+        else if( psOptionsForBinary && psOptionsForBinary->pszDestDataSource == nullptr )
             psOptionsForBinary->pszDestDataSource = CPLStrdup(papszArgv[i]);
-        else if(  psOptionsForBinary && psOptionsForBinary->pszDataSource == NULL )
+        else if(  psOptionsForBinary && psOptionsForBinary->pszDataSource == nullptr )
             psOptionsForBinary->pszDataSource = CPLStrdup(papszArgv[i]);
         else
             psOptions->papszLayers = CSLAddString( psOptions->papszLayers, papszArgv[i] );
@@ -5116,9 +5147,9 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
 
         if( psOptions->bNativeData &&
             CSLFetchNameValue(psOptionsForBinary->papszOpenOptions,
-                              "NATIVE_DATA") == NULL &&
+                              "NATIVE_DATA") == nullptr &&
             CSLFetchNameValue(psOptionsForBinary->papszOpenOptions,
-                              "@NATIVE_DATA") == NULL )
+                              "@NATIVE_DATA") == nullptr )
         {
             psOptionsForBinary->papszOpenOptions = CSLAddString(
                 psOptionsForBinary->papszOpenOptions, "@NATIVE_DATA=YES" );
@@ -5141,7 +5172,7 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
 
 void GDALVectorTranslateOptionsFree( GDALVectorTranslateOptions *psOptions )
 {
-    if( psOptions == NULL )
+    if( psOptions == nullptr )
         return;
 
     CPLFree( psOptions->pszFormat );
@@ -5172,17 +5203,17 @@ void GDALVectorTranslateOptionsFree( GDALVectorTranslateOptions *psOptions )
     CSLDestroy( psOptions->papszFieldTypesToString );
     CSLDestroy( psOptions->papszMetadataOptions );
 
-    if( psOptions->pasGCPs != NULL )
+    if( psOptions->pasGCPs != nullptr )
     {
         GDALDeinitGCPs( psOptions->nGCPCount, psOptions->pasGCPs );
         CPLFree( psOptions->pasGCPs );
     }
 
-    if( psOptions->hClipSrc != NULL )
+    if( psOptions->hClipSrc != nullptr )
         OGR_G_DestroyGeometry( psOptions->hClipSrc );
-    if( psOptions->hClipDst != NULL )
+    if( psOptions->hClipDst != nullptr )
         OGR_G_DestroyGeometry( psOptions->hClipDst );
-    if( psOptions->hSpatialFilter != NULL )
+    if( psOptions->hSpatialFilter != nullptr )
         OGR_G_DestroyGeometry( psOptions->hSpatialFilter );
 
     CPLFree(psOptions);

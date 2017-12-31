@@ -151,7 +151,7 @@ static LWGEOM * GEOS2LWGEOM(GEOSContextHandle_t geosContext, const GEOSGeometry 
         if ( GEOSisEmpty_r(geosContext, geom) )
           return (LWGEOM*)lwpoint_construct_empty(SRID, want3d, 0);
         pa = ptarray_from_GEOSCoordSeq(geosContext,cs, want3d);
-        return (LWGEOM *)lwpoint_construct(SRID, NULL, pa);
+        return (LWGEOM *)lwpoint_construct(SRID, nullptr, pa);
 
     case GEOS_LINESTRING:
     case GEOS_LINEARRING:
@@ -160,7 +160,7 @@ static LWGEOM * GEOS2LWGEOM(GEOSContextHandle_t geosContext, const GEOSGeometry 
 
         cs = GEOSGeom_getCoordSeq_r(geosContext, geom);
         pa = ptarray_from_GEOSCoordSeq(geosContext,cs, want3d);
-        return (LWGEOM *)lwline_construct(SRID, NULL, pa);
+        return (LWGEOM *)lwline_construct(SRID, nullptr, pa);
 
     case GEOS_POLYGON:
         if ( GEOSisEmpty_r(geosContext, geom) )
@@ -177,7 +177,7 @@ static LWGEOM * GEOS2LWGEOM(GEOSContextHandle_t geosContext, const GEOSGeometry 
             ppaa[i+1] = ptarray_from_GEOSCoordSeq(geosContext, cs,
                                                   want3d);
         }
-        return (LWGEOM *)lwpoly_construct(SRID, NULL,
+        return (LWGEOM *)lwpoly_construct(SRID, nullptr,
                                           ngeoms+1, ppaa);
 
     case GEOS_MULTIPOINT:
@@ -185,7 +185,7 @@ static LWGEOM * GEOS2LWGEOM(GEOSContextHandle_t geosContext, const GEOSGeometry 
     case GEOS_MULTIPOLYGON:
     case GEOS_GEOMETRYCOLLECTION:
         ngeoms = GEOSGetNumGeometries_r(geosContext, geom);
-        geoms = NULL;
+        geoms = nullptr;
         if ( ngeoms )
         {
             geoms = (LWGEOM **)lwalloc(sizeof(LWGEOM *)*ngeoms);
@@ -196,10 +196,10 @@ static LWGEOM * GEOS2LWGEOM(GEOSContextHandle_t geosContext, const GEOSGeometry 
             }
         }
         return (LWGEOM *)lwcollection_construct(type,
-                                                SRID, NULL, ngeoms, geoms);
+                                                SRID, nullptr, ngeoms, geoms);
 
     default:
-        return NULL;
+        return nullptr;
 
     }
 }
@@ -208,7 +208,7 @@ GEOSGeometry * LWGEOM2GEOS(GEOSContextHandle_t geosContext, const LWGEOM *lwgeom
 {
     GEOSCoordSeq sq;
     GEOSGeom g, shell;
-    GEOSGeom *geoms = NULL;
+    GEOSGeom *geoms = nullptr;
 
     uint32_t ngeoms, i;
     int geostype;
@@ -221,10 +221,10 @@ GEOSGeometry * LWGEOM2GEOS(GEOSContextHandle_t geosContext, const LWGEOM *lwgeom
         return g;
     }
 
-    LWPOINT *lwp = NULL;
-    LWPOLY *lwpoly = NULL;
-    LWLINE *lwl = NULL;
-    LWCOLLECTION *lwc = NULL;
+    LWPOINT *lwp = nullptr;
+    LWPOLY *lwpoly = nullptr;
+    LWLINE *lwl = nullptr;
+    LWCOLLECTION *lwc = nullptr;
 
     switch (lwgeom->type)
     {
@@ -246,7 +246,7 @@ GEOSGeometry * LWGEOM2GEOS(GEOSContextHandle_t geosContext, const LWGEOM *lwgeom
         if ( ! g )
         {
             /* lwnotice("Exception in LWGEOM2GEOS"); */
-            return NULL;
+            return nullptr;
         }
         break;
     case LINETYPE:
@@ -267,7 +267,7 @@ GEOSGeometry * LWGEOM2GEOS(GEOSContextHandle_t geosContext, const LWGEOM *lwgeom
         if ( ! g )
         {
             /* lwnotice("Exception in LWGEOM2GEOS"); */
-            return NULL;
+            return nullptr;
         }
         break;
 
@@ -283,7 +283,7 @@ GEOSGeometry * LWGEOM2GEOS(GEOSContextHandle_t geosContext, const LWGEOM *lwgeom
         else
         {
             shell = ptarray_to_GEOSLinearRing(geosContext, lwpoly->rings[0], autofix);
-            if ( ! shell ) return NULL;
+            if ( ! shell ) return nullptr;
             /*lwerror("LWGEOM2GEOS: exception during polygon shell conversion"); */
             ngeoms = lwpoly->nrings-1;
             if ( ngeoms > 0 )
@@ -298,14 +298,14 @@ GEOSGeometry * LWGEOM2GEOS(GEOSContextHandle_t geosContext, const LWGEOM *lwgeom
                     while (i) GEOSGeom_destroy_r(geosContext, geoms[--i]);
                     free(geoms);
                     GEOSGeom_destroy_r(geosContext, shell);
-                    return NULL;
+                    return nullptr;
                 }
                 /*lwerror("LWGEOM2GEOS: exception during polygon hole conversion"); */
             }
             g = GEOSGeom_createPolygon_r(geosContext, shell, geoms, ngeoms);
             if (geoms) free(geoms);
         }
-        if ( ! g ) return NULL;
+        if ( ! g ) return nullptr;
         break;
     case MULTIPOINTTYPE:
     case MULTILINETYPE:
@@ -333,18 +333,18 @@ GEOSGeometry * LWGEOM2GEOS(GEOSContextHandle_t geosContext, const LWGEOM *lwgeom
             {
                 while (i) GEOSGeom_destroy_r(geosContext, geoms[--i]);
                 free(geoms);
-                return NULL;
+                return nullptr;
             }
             geoms[i] = g;
         }
         g = GEOSGeom_createCollection_r(geosContext, geostype, geoms, ngeoms);
         if ( geoms ) free(geoms);
-        if ( ! g ) return NULL;
+        if ( ! g ) return nullptr;
         break;
 
     default:
 //		lwerror("Unknown geometry type: %d - %s", lwgeom->type, lwtype_name(lwgeom->type));
-        return NULL;
+        return nullptr;
     }
 
     GEOSSetSRID_r(geosContext, g, lwgeom->srid);

@@ -71,11 +71,11 @@ class OGR2OGRSpatialReferenceHolder
         OGRSpatialReference* m_poSRS;
 
     public:
-        OGR2OGRSpatialReferenceHolder() : m_poSRS(NULL) {}
+        OGR2OGRSpatialReferenceHolder() : m_poSRS(nullptr) {}
        ~OGR2OGRSpatialReferenceHolder() { if( m_poSRS) m_poSRS->Release(); }
 
        void assignNoRefIncrease(OGRSpatialReference* poSRS) {
-           CPLAssert(m_poSRS == NULL);
+           CPLAssert(m_poSRS == nullptr);
            m_poSRS = poSRS;
        }
        OGRSpatialReference* get() { return m_poSRS; }
@@ -493,11 +493,11 @@ public:
           poSRS->Reference();
   }
 
-  bool IsValid() const { return hTransformArg != NULL; }
+  bool IsValid() const { return hTransformArg != nullptr; }
 
   virtual ~GCPCoordTransformation()
   {
-      if( hTransformArg != NULL )
+      if( hTransformArg != nullptr )
       {
           if( bUseTPS )
               GDALDestroyTPSTransformer(hTransformArg);
@@ -512,7 +512,7 @@ public:
   virtual OGRSpatialReference *GetTargetCS() override { return poSRS; }
 
   virtual int Transform( int nCount,
-                         double *x, double *y, double *z = NULL ) override
+                         double *x, double *y, double *z = nullptr ) override
   {
       int *pabSuccess = (int *) CPLMalloc(sizeof(int) * nCount );
 
@@ -533,8 +533,8 @@ public:
   }
 
   virtual int TransformEx( int nCount,
-                           double *x, double *y, double *z = NULL,
-                           int *pabSuccess = NULL ) override
+                           double *x, double *y, double *z = nullptr,
+                           int *pabSuccess = nullptr ) override
   {
       if( bUseTPS )
           return GDALTPSTransform( hTransformArg, FALSE,

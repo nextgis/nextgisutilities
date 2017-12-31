@@ -47,7 +47,7 @@ static bool DoesDriverHandleExtension( GDALDriverH hDriver, const char* pszExt )
 {
     bool bRet = false;
     const char* pszDriverExtensions =
-        GDALGetMetadataItem( hDriver, GDAL_DMD_EXTENSIONS, NULL );
+        GDALGetMetadataItem( hDriver, GDAL_DMD_EXTENSIONS, nullptr );
     if( pszDriverExtensions )
     {
         char** papszTokens = CSLTokenizeString( pszDriverExtensions );
@@ -81,7 +81,7 @@ void CheckExtensionConsistency(const char* pszDestFilename,
     if( !osExt.empty() )
     {
         GDALDriverH hThisDrv = GDALGetDriverByName(pszDriverName);
-        if( hThisDrv != NULL && DoesDriverHandleExtension(hThisDrv, osExt) )
+        if( hThisDrv != nullptr && DoesDriverHandleExtension(hThisDrv, osExt) )
             return;
 
         const int nDriverCount = GDALGetDriverCount();
