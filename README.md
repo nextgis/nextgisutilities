@@ -1,6 +1,6 @@
 # NextGIS utilities
 
-Various console utilities
+Various NextGIS console utilities
 
 ![Language](https://img.shields.io/badge/Language-C++-yellow.svg?maxAge=2592000)
 
@@ -47,6 +47,10 @@ ERROR 1: Attempt to write non-polygon (LINESTRING) geometry to POLYGON type shap
 This program is licensed under GNU GPL v2 or any later version
 
 ![License](https://img.shields.io/badge/License-GPL%20v2-blue.svg?maxAge=2592000)
+
+# Version
+
+0.1.0-27
 
 # Commercial support
 
