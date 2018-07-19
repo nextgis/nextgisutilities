@@ -32,11 +32,6 @@
 ///////////////////////////////////////////////////////////////////////////////
 static void Usage(const char* pszAdditionalMsg, int bShort = TRUE) CPL_NO_RETURN;
 
-static bool StringCISortFunction(const CPLString& a, const CPLString& b)
-{
-    return STRCASECMP(a.c_str(), b.c_str()) < 0;
-}
-
 static void Usage(const char* pszAdditionalMsg, int bShort)
 {
     GDALDriverManager *poDM = GetGDALDriverManager();

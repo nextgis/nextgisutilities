@@ -338,7 +338,7 @@ OGRFeature *OGRSplitListFieldLayer::TranslateFeature(OGRFeature* poSrcFeature)
 
     OGRFeature* poFeature = OGRFeature::CreateFeature(poFeatureDefn);
     poFeature->SetFID(poSrcFeature->GetFID());
-    for(int i=0;i<poFeature->GetGeomFieldCount();i++)
+    for( int i=0; i<poFeature->GetGeomFieldCount(); i++ )
     {
         poFeature->SetGeomFieldDirectly(i, poSrcFeature->StealGeometry(i));
     }
@@ -3809,6 +3809,28 @@ static OGRGeometry* CutGeometry(TargetLayerInfo* psInfo,
     return poGeometry;
 }
 
+static OGRGeometry* forceCollectionTo(OGRGeometry *poGeom, OGRwkbGeometryType eGeomType)
+{
+    OGRwkbGeometryType eFixedGeomType = eGeomType;
+    if(eFixedGeomType > 3)
+    {
+        eFixedGeomType = static_cast<OGRwkbGeometryType>(eFixedGeomType - 3);
+    }
+    OGRGeometryCollection *poGC = poGeom->toGeometryCollection();
+    for( int iGeom = 0; iGeom < poGC->getNumGeometries(); iGeom++ )
+    {
+        OGRwkbGeometryType eSubGeomType =
+                        wkbFlatten(poGC->getGeometryRef(iGeom)->getGeometryType());
+        if(eSubGeomType != eFixedGeomType && eSubGeomType != eFixedGeomType + 3)
+        {
+            poGC->removeGeometry(iGeom);
+            iGeom--;
+        }
+    }
+
+    return OGRGeometryFactory::forceTo(poGeom, eGeomType);
+}
+
 static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeature,
                            TargetLayerInfo* psInfo,
                            OGRSpatialReference* poOutputSRS,
@@ -4095,6 +4117,14 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                     eTargetType = ConvertType(layerTranslator->m_eGeomTypeConversion, eTargetType);
                     poDstGeometry = OGRGeometryFactory::forceTo(poDstGeometry, eTargetType);
                 }
+            }
+
+            // Check for geometry collection
+            if(wkbFlatten(poDstGeometry->getGeometryType()) ==
+                    wkbGeometryCollection)
+            {
+                OGRwkbGeometryType eLayerType = wkbFlatten(poDstLayer->GetLayerDefn()->GetGeomType());
+                poDstGeometry = forceCollectionTo(poDstGeometry, eLayerType);
             }
 
             poDstFeature->SetGeomFieldDirectly(iGeom, poDstGeometry);
@@ -4913,7 +4943,7 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
                       STARTS_WITH_CI(papszArgv[i+1], "MULTIPOLYGON")) &&
                       VSIStatL(papszArgv[i+1], &sStat) != 0)
             {
-                char* pszTmp = (char*) papszArgv[i+1];
+                const char* pszTmp = papszArgv[i+1];
                 OGR_G_DestroyGeometry(psOptions->hClipSrc);
                 OGRGeometryFactory::createFromWkt(&pszTmp, nullptr, (OGRGeometry **)&psOptions->hClipSrc);
                 if (psOptions->hClipSrc == nullptr)
@@ -4986,7 +5016,7 @@ GDALVectorTranslateOptions *GDALVectorTranslateOptionsNew(char** papszArgv,
                       STARTS_WITH_CI(papszArgv[i+1], "MULTIPOLYGON")) &&
                       VSIStatL(papszArgv[i+1], &sStat) != 0)
             {
-                char* pszTmp = (char*) papszArgv[i+1];
+                const char* pszTmp = papszArgv[i+1];
                 OGR_G_DestroyGeometry(psOptions->hClipDst);
                 OGRGeometryFactory::createFromWkt(&pszTmp, nullptr, (OGRGeometry **)&psOptions->hClipDst);
                 if (psOptions->hClipDst == nullptr)

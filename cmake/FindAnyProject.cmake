@@ -133,7 +133,7 @@ function(find_anyproject name)
             endif()
         endif()
 
-        # message(STATUS "QT5_FOUND ${${IS_FOUND}}/${Qt5_FOUND} ${Qt5_NOT_FOUND_MESSAGE}")
+        # message(STATUS "NGSTD_FOUND ${${IS_FOUND}}/${NGSTD_FOUND} ${NGSTD_NOT_FOUND_MESSAGE}")
         if(${IS_FOUND})
             set(${IS_FOUND} TRUE CACHE INTERNAL "use ${name}")
             set(${VERSION_STRING} ${${VERSION_STRING}} CACHE INTERNAL "version ${name}")

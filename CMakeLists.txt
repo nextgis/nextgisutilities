@@ -63,7 +63,7 @@ include(FindAnyProject)
 find_anyproject(GDAL REQUIRED)
 find_anyproject(GEOS REQUIRED)
 find_anyproject(PROJ4 REQUIRED)
-find_anyproject(LWGEOM REQUIRED)
+find_anyproject(LWGEOM REQUIRED NAMES PostGIS lwgeom)
 
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
