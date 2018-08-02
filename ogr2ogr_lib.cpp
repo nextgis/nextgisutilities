@@ -3689,10 +3689,9 @@ static OGRGeometry* CutGeometry(TargetLayerInfo* psInfo,
                 wasInvalid = true;
             }
             else {
-                delete poGeometry;
-                psInfo->nFeaturesSkipClip++;
+                // return current invalid geometry
                 GEOSGeom_destroy_r(geosContext, dstGeom);
-                return nullptr;
+                dstGeom = nullptr;
             }
         }
 
