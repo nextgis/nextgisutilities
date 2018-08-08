@@ -4,6 +4,12 @@ Various NextGIS console utilities
 
 ![Language](https://img.shields.io/badge/Language-C++-yellow.svg?maxAge=2592000)
 
+# Install
+
+```
+sudo apt-get install nextgisutilities-bin
+```
+
 # Performance checking
 
 ## Normal run
