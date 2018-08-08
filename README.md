@@ -18,8 +18,12 @@ ng_cutter -f "ESRI Shapefile"  -overwrite -progress -skipfailures  -nlt MULTIPOL
 # Install
 
 ```
+sudo apt-get install software-properties-common python-software-properties
+sudo apt-add-repository ppa:nextgis/ppa
+sudo apt-get update
 sudo apt-get install nextgisutilities-bin
 ```
+See http://nextgis.ru/borsch/ for repository info
 
 # Performance checking
 
