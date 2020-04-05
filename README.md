@@ -4,6 +4,27 @@ Various NextGIS console utilities
 
 ![Language](https://img.shields.io/badge/Language-C++-yellow.svg?maxAge=2592000)
 
+
+# Usage
+
+## ng_cutter
+
+Like ogr2ogr with multithread cutting (-clipsrc)
+
+```
+ng_cutter -f "ESRI Shapefile"  -overwrite -progress -skipfailures  -nlt MULTIPOLYGON -lco SPATIAL_INDEX=NO      -lco ENCODING=UTF-8 -clipsrc boundary.geojson ngcutter_clipped.shp multipolygons.shp
+```
+
+# Install
+
+```
+sudo apt-get install software-properties-common python-software-properties
+sudo apt-add-repository ppa:nextgis/ppa
+sudo apt-get update
+sudo apt-get install nextgisutilities-bin
+```
+See http://nextgis.ru/borsch/ for repository info
+
 # Performance checking
 
 ## Normal run
