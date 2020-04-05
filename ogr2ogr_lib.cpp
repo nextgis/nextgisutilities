@@ -8,7 +8,7 @@
  * Copyright (c) 1999, Frank Warmerdam
  * Copyright (c) 2008-2015, Even Rouault <even dot rouault at mines-paris dot org>
  * Copyright (c) 2015, Faza Mahamood
- * Copyright (c) 2017, NextGIS <info@nextgis.com>
+ * Copyright (c) 2017-2020, NextGIS <info@nextgis.com>
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -29,9 +29,7 @@
  * DEALINGS IN THE SOFTWARE.
  ****************************************************************************/
 
-#include "cpl_port.h"
 #include "ogr2ogr_lib.h"
-
 
 #include <climits>
 #include <cstdio>
@@ -43,8 +41,8 @@
 #include <utility>
 #include <vector>
 
+#include "cpl_port.h"
 #include "commonutils.h"
-#include "cpl_conv.h"
 #include "cpl_error.h"
 #include "cpl_progress.h"
 #include "cpl_string.h"
@@ -52,7 +50,8 @@
 #include "ogrlayerdecorator.h"
 #include "cpl_worker_thread_pool.h"
 
-#include "lwgeom_lib.h"
+#define GEOS_USE_ONLY_R_API
+#include <geos_c.h>
 
 OGRLayer* GetLayerAndOverwriteIfNecessary(GDALDataset *poDstDS,
                                                  const char* pszNewLayerName,
@@ -450,21 +449,37 @@ OGRFeatureDefn* OGRSplitListFieldLayer::GetLayerDefn()
 
 class CompositeCT : public OGRCoordinateTransformation
 {
+    CompositeCT(const CompositeCT& other):
+        poCT1(other.poCT1 ? other.poCT1->Clone(): nullptr),
+        bOwnCT1(true),
+        poCT2(other.poCT2 ? other.poCT2->Clone(): nullptr),
+        bOwnCT2(true) {}
+
 public:
 
     OGRCoordinateTransformation* poCT1;
+    bool bOwnCT1;
     OGRCoordinateTransformation* poCT2;
+    bool bOwnCT2;
 
-    CompositeCT( OGRCoordinateTransformation* poCT1In, /* will not be deleted */
-                 OGRCoordinateTransformation* poCT2In  /* deleted with OGRCoordinateTransformation::DestroyCT() */ )
-    {
-        poCT1 = poCT1In;
-        poCT2 = poCT2In;
-    }
+    CompositeCT( OGRCoordinateTransformation* poCT1In, bool bOwnCT1In,
+                 OGRCoordinateTransformation* poCT2In, bool bOwnCT2In ) :
+        poCT1(poCT1In),
+        bOwnCT1(bOwnCT1In),
+        poCT2(poCT2In),
+        bOwnCT2(bOwnCT2In)
+    {}
 
     virtual ~CompositeCT()
     {
-        OGRCoordinateTransformation::DestroyCT(poCT2);
+        if( bOwnCT1 )
+            delete poCT1;
+        if( bOwnCT2 )
+            delete poCT2;
+    }
+
+    OGRCoordinateTransformation* Clone() const override {
+        return new CompositeCT(*this);
     }
 
     virtual OGRSpatialReference *GetSourceCS() override
@@ -480,25 +495,15 @@ public:
     }
 
     virtual int Transform( int nCount,
-                           double *x, double *y, double *z = nullptr ) override
+                           double *x, double *y, double *z,
+                           double *t,
+                           int *pabSuccess ) override
     {
         int nResult = TRUE;
         if( poCT1 )
-            nResult = poCT1->Transform(nCount, x, y, z);
+            nResult = poCT1->Transform(nCount, x, y, z, t, pabSuccess);
         if( nResult && poCT2 )
-            nResult = poCT2->Transform(nCount, x, y, z);
-        return nResult;
-    }
-
-    virtual int TransformEx( int nCount,
-                             double *x, double *y, double *z = nullptr,
-                             int *pabSuccess = nullptr ) override
-    {
-        int nResult = TRUE;
-        if( poCT1 )
-            nResult = poCT1->TransformEx(nCount, x, y, z, pabSuccess);
-        if( nResult && poCT2 )
-            nResult = poCT2->TransformEx(nCount, x, y, z, pabSuccess);
+            nResult = poCT2->Transform(nCount, x, y, z, t, pabSuccess);
         return nResult;
     }
 };
@@ -1173,6 +1178,7 @@ GDALDataset* GDALVectorTranslateCreateCopy(
     if( psOptions->pszOutputSRSDef )
     {
         oOutputSRSHolder.assignNoRefIncrease(new OGRSpatialReference());
+        oOutputSRSHolder.get()->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
         if( oOutputSRSHolder.get()->
                 SetFromUserInput( psOptions->pszOutputSRSDef ) != OGRERR_NONE )
         {
@@ -1727,6 +1733,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
     if( psOptions->pszOutputSRSDef != nullptr )
     {
         oOutputSRSHolder.assignNoRefIncrease(new OGRSpatialReference());
+        oOutputSRSHolder.get()->SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
         if( oOutputSRSHolder.get()->
                 SetFromUserInput( psOptions->pszOutputSRSDef ) != OGRERR_NONE )
         {
@@ -1743,6 +1750,7 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
 /* -------------------------------------------------------------------- */
     if( psOptions->pszSourceSRSDef != nullptr )
     {
+        oSourceSRS.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
         if( oSourceSRS.SetFromUserInput( psOptions->pszSourceSRSDef ) != OGRERR_NONE )
         {
             CPLError( CE_Failure, CPLE_AppDefined, "Failed to process SRS definition: %s",
@@ -1767,7 +1775,8 @@ GDALDatasetH GDALVectorTranslate( const char *pszDest, GDALDatasetH hDstDS, int 
             return nullptr;
         }
         OGREnvelope sEnvelope;
-        ((OGRGeometry*)psOptions->hSpatialFilter)->getEnvelope(&sEnvelope);
+        OGR_G_GetEnvelope(psOptions->hSpatialFilter, &sEnvelope);
+        oSpatSRS.SetAxisMappingStrategy(OAMS_TRADITIONAL_GIS_ORDER);
         if( oSpatSRS.SetFromUserInput( psOptions->pszSpatSRSDef ) != OGRERR_NONE )
         {
             CPLError( CE_Failure, CPLE_AppDefined, "Failed to process SRS definition: %s",
@@ -3574,7 +3583,7 @@ static bool SetupCT( TargetLayerInfo* psInfo,
                     return false;
                 }
                 if( poGCPCoordTrans != nullptr )
-                    poCT = new CompositeCT( poGCPCoordTrans, poCT );
+                    poCT = new CompositeCT( poGCPCoordTrans, false, poCT, true );
             }
 
             if( poCT != psInfo->papoCT[iGeom] )
@@ -3684,8 +3693,9 @@ static OGRGeometry* CutGeometry(TargetLayerInfo* psInfo,
             }
 
             if(bFixGeom) {
-                dstGeom = MakeValid(geosContext, dstGeom,
-                                    static_cast<OGRwkbGeometryType>(eGType));
+                GEOSGeom hGEOSRet = GEOSMakeValid_r(geosContext, dstGeom);
+                GEOSGeom_destroy_r(geosContext, dstGeom);
+                dstGeom = hGEOSRet;
                 wasInvalid = true;
             }
             else {

@@ -3,7 +3,7 @@
  * Purpose:  NextGIS store and visualisation support library
  * Author: Dmitry Baryshnikov, dmitry.baryshnikov@nextgis.com
  ******************************************************************************
- *   Copyright (c) 2017 NextGIS, <info@nextgis.com>
+ *   Copyright (c) 2017-2020 NextGIS, <info@nextgis.com>
  *
  *    This program is free software: you can redistribute it and/or modify
  *    it under the terms of the GNU Lesser General Public License as published by
@@ -26,7 +26,7 @@
 #define STR(x) STR_HELPER(x)
 
 #define NGU_VERSION_MAJOR 0
-#define NGU_VERSION_MINOR 1
+#define NGU_VERSION_MINOR 2
 #define NGU_VERSION_REV   0
 #define NGU_VERSION  STR(NGU_VERSION_MAJOR) "." STR(NGU_VERSION_MINOR) "." \
     STR(NGU_VERSION_REV)

@@ -3,7 +3,7 @@
 # Purpose:  CMake build scripts
 # Author:   Dmitry Baryshnikov, dmitry.baryshnikov@nexgis.com
 ################################################################################
-# Copyright (C) 2017, NextGIS <info@nextgis.com>
+# Copyright (C) 2017-2020, NextGIS <info@nextgis.com>
 #
 # This script is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -62,14 +62,11 @@ report_version(${PROJECT_NAME} ${VERSION})
 include(FindAnyProject)
 find_anyproject(GDAL REQUIRED)
 find_anyproject(GEOS REQUIRED)
-find_anyproject(PROJ4 REQUIRED)
-find_anyproject(LWGEOM REQUIRED NAMES PostGIS lwgeom)
+find_anyproject(PROJ REQUIRED)
 
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-std=c++11" COMPILER_SUPPORTS_CXX11)
-if(COMPILER_SUPPORTS_CXX11)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-endif()
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(INSTALL_TARGETS)
 
@@ -86,7 +83,6 @@ endmacro()
 set(NG_CUTTER_H
     commonutils.h
     ogr2ogr_lib.h
-    lwgeom_lib.h
     ogrlayerdecorator.h
 )
 
@@ -94,7 +90,6 @@ set(NG_CUTTER_SRC
     ng_cutter.cpp
     commonutils.cpp
     ogr2ogr_lib.cpp
-    lwgeom_lib.cpp
     ogrlayerdecorator.cpp
 )
 

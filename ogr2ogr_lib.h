@@ -34,13 +34,12 @@
 #include "gdal_priv.h"
 #include "gdal_alg.h"
 #include "ogr_api.h"
-#include "ogr_core.h"
 #include "ogr_feature.h"
 #include "ogr_featurestyle.h"
 #include "ogr_geometry.h"
 #include "ogr_p.h"
-#include "ogr_spatialref.h"
 #include "ogrsf_frmts.h"
+#include "gdal_alg_priv.h"
 
 /* Access modes */
 typedef enum
@@ -465,84 +464,74 @@ public:
 
 class GCPCoordTransformation : public OGRCoordinateTransformation
 {
+    GCPCoordTransformation(const GCPCoordTransformation& other):
+        hTransformArg(GDALCloneTransformer(other.hTransformArg)),
+        bUseTPS(other.bUseTPS),
+        poSRS(other.poSRS)
+    {
+        if( poSRS)
+            poSRS->Reference();
+    }
+
 public:
 
-  void               *hTransformArg;
-  bool                 bUseTPS;
-  OGRSpatialReference* poSRS;
+    void               *hTransformArg;
+    bool                 bUseTPS;
+    OGRSpatialReference* poSRS;
 
-  GCPCoordTransformation( int nGCPCount,
-                          const GDAL_GCP *pasGCPList,
-                          int  nReqOrder,
-                          OGRSpatialReference* poSRSIn)
-  {
-      if( nReqOrder < 0 )
-      {
-          bUseTPS = true;
-          hTransformArg =
-              GDALCreateTPSTransformer( nGCPCount, pasGCPList, FALSE );
-      }
-      else
-      {
-          bUseTPS = false;
-          hTransformArg =
-              GDALCreateGCPTransformer( nGCPCount, pasGCPList, nReqOrder, FALSE );
-      }
-      poSRS = poSRSIn;
-      if( poSRS)
-          poSRS->Reference();
-  }
+    GCPCoordTransformation( int nGCPCount,
+                            const GDAL_GCP *pasGCPList,
+                            int  nReqOrder,
+                            OGRSpatialReference* poSRSIn) :
+        hTransformArg(nullptr),
+        bUseTPS(nReqOrder < 0),
+        poSRS(poSRSIn)
+    {
+        if( nReqOrder < 0 )
+        {
+            hTransformArg =
+                GDALCreateTPSTransformer( nGCPCount, pasGCPList, FALSE );
+        }
+        else
+        {
+            hTransformArg =
+                GDALCreateGCPTransformer( nGCPCount, pasGCPList, nReqOrder, FALSE );
+        }
+        if( poSRS)
+            poSRS->Reference();
+    }
 
-  bool IsValid() const { return hTransformArg != nullptr; }
+    OGRCoordinateTransformation* Clone() const override {
+        return new GCPCoordTransformation(*this);
+    }
 
-  virtual ~GCPCoordTransformation()
-  {
-      if( hTransformArg != nullptr )
-      {
-          if( bUseTPS )
-              GDALDestroyTPSTransformer(hTransformArg);
-          else
-              GDALDestroyGCPTransformer(hTransformArg);
-      }
-      if( poSRS)
-          poSRS->Dereference();
-  }
+    bool IsValid() const { return hTransformArg != nullptr; }
 
-  virtual OGRSpatialReference *GetSourceCS() override { return poSRS; }
-  virtual OGRSpatialReference *GetTargetCS() override { return poSRS; }
+    virtual ~GCPCoordTransformation()
+    {
+        if( hTransformArg != nullptr )
+        {
+            GDALDestroyTransformer(hTransformArg);
+        }
+        if( poSRS)
+            poSRS->Dereference();
+    }
 
-  virtual int Transform( int nCount,
-                         double *x, double *y, double *z = nullptr ) override
-  {
-      int *pabSuccess = (int *) CPLMalloc(sizeof(int) * nCount );
+    virtual OGRSpatialReference *GetSourceCS() override { return poSRS; }
+    virtual OGRSpatialReference *GetTargetCS() override { return poSRS; }
 
-      bool bOverallSuccess = CPL_TO_BOOL(TransformEx( nCount, x, y, z, pabSuccess ));
-
-      for( int i = 0; i < nCount; ++i )
-      {
-          if( !pabSuccess[i] )
-          {
-              bOverallSuccess = false;
-              break;
-          }
-      }
-
-      CPLFree( pabSuccess );
-
-      return bOverallSuccess;
-  }
-
-  virtual int TransformEx( int nCount,
-                           double *x, double *y, double *z = nullptr,
-                           int *pabSuccess = nullptr ) override
-  {
-      if( bUseTPS )
-          return GDALTPSTransform( hTransformArg, FALSE,
-                               nCount, x, y, z, pabSuccess );
-      else
-          return GDALGCPTransform( hTransformArg, FALSE,
-                               nCount, x, y, z, pabSuccess );
-  }
+    virtual int Transform( int nCount,
+                           double *x, double *y, double *z,
+                           double * /* t */,
+                           int *pabSuccess ) override
+    {
+        if( bUseTPS )
+            return GDALTPSTransform( hTransformArg, FALSE,
+                                 nCount, x, y, z, pabSuccess );
+        else
+            return GDALGCPTransform( hTransformArg, FALSE,
+                                 nCount, x, y, z, pabSuccess );
+    }
 };
 
 /************************************************************************/
