@@ -53,6 +53,8 @@
 #define GEOS_USE_ONLY_R_API
 #include <geos_c.h>
 
+static constexpr double WAIT_IN_SECONDS = 10.5;
+
 OGRLayer* GetLayerAndOverwriteIfNecessary(GDALDataset *poDstDS,
                                                  const char* pszNewLayerName,
                                                  bool bOverwrite,
@@ -3653,65 +3655,65 @@ static OGRGeometry* CutGeometry(TargetLayerInfo* psInfo,
     bool wasInvalid = false;
 
     if(nullptr != dstGeom) {
-        // Check if valid
-        if(GEOSisValid_r(geosContext, dstGeom) != 1) {
-            // Check if geometry envelope is completelly outside of cut geometry
-            // and if yes - skip it.
-            OGREnvelope env;
-            poGeometry->getEnvelope(&env);
+		// Check if geometry envelope is completelly outside of cut geometry
+		// and if yes - skip it.
+		OGREnvelope env;
+		poGeometry->getEnvelope(&env);
 
-            GEOSCoordSequence *poSeq = GEOSCoordSeq_create_r(geosContext, 5, 2);
-            GEOSCoordSeq_setX_r(geosContext, poSeq, 0, env.MinX);
-            GEOSCoordSeq_setY_r(geosContext, poSeq, 0, env.MinY);
-            GEOSCoordSeq_setX_r(geosContext, poSeq, 1, env.MinX);
-            GEOSCoordSeq_setY_r(geosContext, poSeq, 1, env.MaxY);
-            GEOSCoordSeq_setX_r(geosContext, poSeq, 2, env.MaxX);
-            GEOSCoordSeq_setY_r(geosContext, poSeq, 2, env.MaxY);
-            GEOSCoordSeq_setX_r(geosContext, poSeq, 3, env.MaxX);
-            GEOSCoordSeq_setY_r(geosContext, poSeq, 3, env.MinY);
-            GEOSCoordSeq_setX_r(geosContext, poSeq, 4, env.MinX);
-            GEOSCoordSeq_setY_r(geosContext, poSeq, 4, env.MinY);
+		GEOSCoordSequence *poSeq = GEOSCoordSeq_create_r(geosContext, 5, 2);
+		GEOSCoordSeq_setX_r(geosContext, poSeq, 0, env.MinX);
+		GEOSCoordSeq_setY_r(geosContext, poSeq, 0, env.MinY);
+		GEOSCoordSeq_setX_r(geosContext, poSeq, 1, env.MinX);
+		GEOSCoordSeq_setY_r(geosContext, poSeq, 1, env.MaxY);
+		GEOSCoordSeq_setX_r(geosContext, poSeq, 2, env.MaxX);
+		GEOSCoordSeq_setY_r(geosContext, poSeq, 2, env.MaxY);
+		GEOSCoordSeq_setX_r(geosContext, poSeq, 3, env.MaxX);
+		GEOSCoordSeq_setY_r(geosContext, poSeq, 3, env.MinY);
+		GEOSCoordSeq_setX_r(geosContext, poSeq, 4, env.MinX);
+		GEOSCoordSeq_setY_r(geosContext, poSeq, 4, env.MinY);
 
-            GEOSGeometry *poGeosRing = GEOSGeom_createLinearRing_r(geosContext,
-                                                                   poSeq);
-            GEOSGeometry *poEnvelopePolygon =
-                    GEOSGeom_createPolygon_r(geosContext, poGeosRing, nullptr, 0);
+		GEOSGeometry *poGeosRing = GEOSGeom_createLinearRing_r(geosContext,
+			poSeq);
+		GEOSGeometry *poEnvelopePolygon =
+			GEOSGeom_createPolygon_r(geosContext, poGeosRing, nullptr, 0);
 
-            CPLMutexHolder holder(hMutex, 10.5);
+		CPLMutexHolder holder(hMutex, WAIT_IN_SECONDS);
 
-            result = GEOSPreparedIntersects_r(geosContext, geosCutGeomPrep,
-                                              poEnvelopePolygon);
-            GEOSGeom_destroy_r(geosContext, poEnvelopePolygon);
+		result = GEOSPreparedIntersects_r(geosContext, geosCutGeomPrep,
+			poEnvelopePolygon);
+		GEOSGeom_destroy_r(geosContext, poEnvelopePolygon);
 
-            if(result != 1)
-            {
-                // In this case the geometry envelope not intersects with cut geometry
-                delete poGeometry;
-                psInfo->nFeaturesSkipClip++;
-                GEOSGeom_destroy_r(geosContext, dstGeom);
-                return nullptr;
-            }
+		if (result != 1)
+		{
+			// In this case the geometry envelope not intersects with cut geometry
+			delete poGeometry;
+			psInfo->nFeaturesSkipClip++;
+			GEOSGeom_destroy_r(geosContext, dstGeom);
+			return nullptr;
+		}
 
-            if(bFixGeom) {
-                GEOSGeom hGEOSRet = GEOSMakeValid_r(geosContext, dstGeom);
-                GEOSGeom_destroy_r(geosContext, dstGeom);
-                dstGeom = hGEOSRet;
-                wasInvalid = true;
-            }
-            else {
-                // return current invalid geometry
-                GEOSGeom_destroy_r(geosContext, dstGeom);
-                dstGeom = nullptr;
-            }
-        }
+		// Check if valid
+		if (GEOSisValid_r(geosContext, dstGeom) != 1) {
+			if (bFixGeom) {
+				GEOSGeom hGEOSRet = GEOSMakeValid_r(geosContext, dstGeom);
+				GEOSGeom_destroy_r(geosContext, dstGeom);
+				dstGeom = hGEOSRet;
+				wasInvalid = true;
+			}
+			else {
+				// return current invalid geometry
+				GEOSGeom_destroy_r(geosContext, dstGeom);
+				dstGeom = nullptr;
+			}
+		}
+	}
 
-        // Check if geom within cut geom
-        if(nullptr != dstGeom) {
-            CPLMutexHolder holder(hMutex, 10.5);
-            result = GEOSPreparedContains_r(geosContext,
-                                            geosCutGeomPrep,
-                                            dstGeom);
-        }
+	// Check if geom within cut geom
+	if (nullptr != dstGeom) {
+		CPLMutexHolder holder(hMutex, WAIT_IN_SECONDS);
+		result = GEOSPreparedContains_r(geosContext,
+			geosCutGeomPrep,
+			dstGeom);
     }
     else {
         OGREnvelope env;
@@ -3734,7 +3736,7 @@ static OGRGeometry* CutGeometry(TargetLayerInfo* psInfo,
         GEOSGeometry *poEnvelopePolygon =
                 GEOSGeom_createPolygon_r(geosContext, poGeosRing, nullptr, 0);
 
-        CPLMutexHolder holder(hMutex, 10.5);
+        CPLMutexHolder holder(hMutex, WAIT_IN_SECONDS);
 
         result = GEOSPreparedIntersects_r(geosContext, geosCutGeomPrep,
                                           poEnvelopePolygon);
@@ -3765,7 +3767,7 @@ static OGRGeometry* CutGeometry(TargetLayerInfo* psInfo,
         if(result != 1) {
             // Check intersection
             {
-                CPLMutexHolder holder(hMutex, 10.5);
+                CPLMutexHolder holder(hMutex, WAIT_IN_SECONDS);
                 result = GEOSPreparedIntersects_r(geosContext,
                                                   geosCutGeomPrep,
                                                   dstGeom);
@@ -3782,7 +3784,7 @@ static OGRGeometry* CutGeometry(TargetLayerInfo* psInfo,
                                                                cutGeom);
                 }
 
-                CPLMutexHolder holder(hMutex, 10.5);
+                CPLMutexHolder holder(hMutex, WAIT_IN_SECONDS);
                 GEOSGeom_destroy_r(geosContext, cutGeom);
 
                 delete poGeometry;
@@ -3799,7 +3801,7 @@ static OGRGeometry* CutGeometry(TargetLayerInfo* psInfo,
             else {
                 delete poGeometry;
                 psInfo->nFeaturesOutOfClip++;
-                CPLMutexHolder holder(hMutex, 10.5);
+                CPLMutexHolder holder(hMutex, WAIT_IN_SECONDS);
                 GEOSGeom_destroy_r(geosContext, dstGeom);
                 return nullptr;
             }
@@ -3812,7 +3814,7 @@ static OGRGeometry* CutGeometry(TargetLayerInfo* psInfo,
         else {
             psInfo->nFeaturesInsideClip++;
         }
-        CPLMutexHolder holder(hMutex, 10.5);
+        CPLMutexHolder holder(hMutex, WAIT_IN_SECONDS);
         GEOSGeom_destroy_r(geosContext, dstGeom);
     }
     return poGeometry;
