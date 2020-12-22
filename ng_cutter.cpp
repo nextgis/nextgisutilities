@@ -24,6 +24,7 @@
  #include "ogr_p.h"
  #include "commonutils.h"
  #include "ogr2ogr_lib.h"
+ #include "version.h"
  // #include <vector>
  // #include <algorithm>
 
@@ -239,8 +240,8 @@ int main( int nArgc, char ** papszArgv )
     {
         if( EQUAL(papszArgv[iArg], "--utility_version") )
         {
-            printf("%s was compiled against GDAL %s and is running against GDAL %s\n",
-                   papszArgv[0], GDAL_RELEASE_NAME, GDALVersionInfo("RELEASE_NAME"));
+            printf("%s %s was compiled against GDAL %s and is running against GDAL %s\n",
+                   papszArgv[0], NGU_VERSION, GDAL_RELEASE_NAME, GDALVersionInfo("RELEASE_NAME"));
             nRetCode = 0;
             goto exit;
         }
