@@ -4026,7 +4026,9 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
             if (layerTranslator->m_eGeomOp == GEOMOP_SEGMENTIZE)
             {
                 if (layerTranslator->m_dfGeomOpParam > 0)
+                {
                     poDstGeometry->segmentize(layerTranslator->m_dfGeomOpParam);
+                }
             }
             else if (layerTranslator->m_eGeomOp == GEOMOP_SIMPLIFY_PRESERVE_TOPOLOGY)
             {
@@ -4144,7 +4146,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
         CPLErrorReset();
 
         if(hMutex) {
-            CPLAcquireMutex(hMutex, 10.0);
+            CPLAcquireMutex(hMutex, WAIT_IN_SECONDS);
         }
 
         if( poDstLayer->CreateFeature( poDstFeature ) == OGRERR_NONE )
@@ -4168,7 +4170,7 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                 long minutes = (nEstimate / 60) - (hours * 60);
                 long seconds = nEstimate - (hours * 3600 + minutes * 60);
                 CPLDebug("NextGIS Cutter", "Features read: " CPL_FRMT_GIB
-                         " / write: " CPL_FRMT_GIB " - %.2f %% [Estimate %02ld:%02ld:%02ld]\nOut of clip bbox: " CPL_FRMT_GIB
+                         " / write: " CPL_FRMT_GIB " - %.2f%% [Estimate %02ld:%02ld:%02ld]\nOut of clip bbox: " CPL_FRMT_GIB
                          ", Inside clip bbox: " CPL_FRMT_GIB ", Clipped: " CPL_FRMT_GIB ", Skipped: " CPL_FRMT_GIB,
                          psInfo->nFeaturesRead, nFeaturesWritten,
                          double(nTotalProcessed) / psInfo->nFeaturesRead * 100.0,
@@ -4185,7 +4187,8 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
                     poDstLayer->RollbackTransaction();
             }
 
-            if(hMutex) {
+            if(hMutex) 
+            {
                 CPLReleaseMutex(hMutex);
             }
 
@@ -4216,7 +4219,8 @@ static bool ProcessFeature(LayerTranslator* layerTranslator, OGRFeature* poFeatu
             }
         }
 
-        if(hMutex) {
+        if(hMutex) 
+        {
             CPLReleaseMutex(hMutex);
         }
 
