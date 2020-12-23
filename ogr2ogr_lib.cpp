@@ -53,7 +53,7 @@
 #define GEOS_USE_ONLY_R_API
 #include <geos_c.h>
 
-static constexpr double WAIT_IN_SECONDS = 10.5;
+static constexpr double WAIT_IN_SECONDS = 155.5;
 
 OGRLayer* GetLayerAndOverwriteIfNecessary(GDALDataset *poDstDS,
                                                  const char* pszNewLayerName,
