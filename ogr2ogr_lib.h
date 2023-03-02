@@ -532,6 +532,8 @@ public:
             return GDALGCPTransform( hTransformArg, FALSE,
                                  nCount, x, y, z, pabSuccess );
     }
+
+    virtual OGRCoordinateTransformation* GetInverse() const override { return nullptr; }
 };
 
 /************************************************************************/

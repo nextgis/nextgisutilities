@@ -508,6 +508,8 @@ public:
             nResult = poCT2->Transform(nCount, x, y, z, t, pabSuccess);
         return nResult;
     }
+
+    virtual OGRCoordinateTransformation* GetInverse() const override { return nullptr; }
 };
 
 /************************************************************************/
