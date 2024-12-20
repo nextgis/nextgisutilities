@@ -81,23 +81,22 @@ ELSE(WIN32)
     IF (NOT GEOS_INCLUDE_DIR OR NOT GEOS_LIBRARY OR NOT GEOS_CONFIG)
       # didn't find OS X framework, and was not set by user
       SET(GEOS_CONFIG_PREFER_PATH "$ENV{GEOS_HOME}/bin" CACHE STRING "preferred path to GEOS (geos-config)")
-      FIND_PROGRAM(GEOS_CONFIG geos-config
+      FIND_PROGRAM(GEOS_CONFIG_APP geos-config
           ${GEOS_CONFIG_PREFER_PATH}
           /usr/local/bin/
           /usr/bin/
           )
-      #MESSAGE("DBG GEOS_CONFIG ${GEOS_CONFIG}")
 
-      IF (GEOS_CONFIG)
+      IF (GEOS_CONFIG_APP)
 
-        EXEC_PROGRAM(${GEOS_CONFIG}
+        EXEC_PROGRAM(${GEOS_CONFIG_APP}
             ARGS --version
             OUTPUT_VARIABLE GEOS_VERSION)
         STRING(REGEX REPLACE "([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\1" GEOS_VERSION_MAJOR "${GEOS_VERSION}")
         STRING(REGEX REPLACE "([0-9]+)\\.([0-9]+)\\.([0-9]+)" "\\2" GEOS_VERSION_MINOR "${GEOS_VERSION}")
 
         # set INCLUDE_DIR to prefix+include
-        EXEC_PROGRAM(${GEOS_CONFIG}
+        EXEC_PROGRAM(${GEOS_CONFIG_APP}
             ARGS --prefix
             OUTPUT_VARIABLE GEOS_PREFIX)
 
@@ -109,7 +108,7 @@ ELSE(WIN32)
             )
 
         ## extract link dirs for rpath
-        EXEC_PROGRAM(${GEOS_CONFIG}
+        EXEC_PROGRAM(${GEOS_CONFIG_APP}
             ARGS --libs
             OUTPUT_VARIABLE GEOS_CONFIG_LIBS )
 
@@ -157,9 +156,9 @@ ELSE(WIN32)
         ENDIF (APPLE)
         #MESSAGE("DBG  GEOS_LIBRARY=${GEOS_LIBRARY}")
 
-      ELSE(GEOS_CONFIG)
-        MESSAGE("FindGEOS.cmake: geos-config not found. Please set it manually. GEOS_CONFIG=${GEOS_CONFIG}")
-      ENDIF(GEOS_CONFIG)
+      ELSE(GEOS_CONFIG_APP)
+        MESSAGE("FindGEOS.cmake: geos-config not found. Please set it manually. GEOS_CONFIG_APP=${GEOS_CONFIG_APP}")
+      ENDIF(GEOS_CONFIG_APP)
     ENDIF(NOT GEOS_INCLUDE_DIR OR NOT GEOS_LIBRARY OR NOT GEOS_CONFIG)
   ENDIF(UNIX)
 ENDIF(WIN32)

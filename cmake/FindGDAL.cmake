@@ -78,7 +78,7 @@ if(UNIX)
     # allow us to -lgdal1.x.y where x.y are correct version)
     # For some reason, libgdal development packages do not contain
     # libgdal.so...
-    find_program(GDAL_CONFIG gdal-config
+	find_program(GDAL_CONFIG_APP gdal-config
         HINTS
           ENV GDAL_DIR
           ENV GDAL_ROOT
@@ -90,8 +90,8 @@ if(UNIX)
             /opt
     )
 
-    if(GDAL_CONFIG)
-        exec_program(${GDAL_CONFIG} ARGS --libs OUTPUT_VARIABLE GDAL_CONFIG_LIBS)
+    if(GDAL_CONFIG_APP)
+        exec_program(${GDAL_CONFIG_APP} ARGS --libs OUTPUT_VARIABLE GDAL_CONFIG_LIBS)
         if(GDAL_CONFIG_LIBS)
             string(REGEX MATCHALL "-l[^ ]+" _gdal_dashl ${GDAL_CONFIG_LIBS})
             string(REPLACE "-l" "" _gdal_lib "${_gdal_dashl}")
